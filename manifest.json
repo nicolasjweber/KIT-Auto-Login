@@ -1,0 +1,28 @@
+{
+  "manifest_version": 2,
+  "name": "iliasLogin",
+  "version": "2.2.2",
+  "description": "Clicks through the ilias login pages automatically. This is just a quick and dirty fix for the addon by phillip: https://addons.mozilla.org/de/firefox/user/14993198/. I don't know any Javascript :)",
+  "icons": {
+    "48": "icons/48pxIliasLogo.png"
+  },
+  "browser_action": {
+    "default_icon": {
+      "16": "icons/16pxiliasLogo.png",
+      "32": "icons/32pxiliasLogo.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.ilias.studium.kit.edu/login*",
+        "*://*.campus.studium.kit.edu/*",
+        "*://*.ilias.studium.kit.edu/ilias.php*",
+        "*://*.idp.scc.kit.edu/idp/profile*"
+      ],
+      "js": [
+        "iliasLogin.js"
+      ]
+    }
+  ]
+}
