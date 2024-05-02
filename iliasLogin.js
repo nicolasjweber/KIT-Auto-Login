@@ -1,7 +1,7 @@
-/// script to go through the KIT ilias and campus pages
+/// script to click through the KIT ILIAS and CAS Campus pages
 
-//Original by phillip > https://addons.mozilla.org/de/firefox/addon/iliaslogin/
-//Fix for ilias_7 by BenedictLoe > https://github.com/BenedictLoe/iliasLogin_7
+// Original by phillip > https://addons.mozilla.org/de/firefox/addon/iliaslogin/
+// Fix for ilias_7 by BenedictLoe > https://github.com/BenedictLoe/iliasLogin_7
 
 if (window.location.href.indexOf("ilias.studium.kit.edu/login") > -1) {
   console.log("TestSimple URL detected");
@@ -20,14 +20,10 @@ if (window.location.href.indexOf("ilias.studium.kit.edu/login") > -1) {
 } else if (detectMoreComplexUrl()) {
   console.log("Complex URL detected");
   clickListElement("il-maincontrols-metabar", 2)
-}
-
-else if (window.location.href.toLowerCase().indexOf("https://ilias.studium.kit.edu/login.php?client_id=produktiv&cmd=force_login&lang=") > -1) {
+} else if (window.location.href.toLowerCase().indexOf("https://ilias.studium.kit.edu/login.php?client_id=produktiv&cmd=force_login&lang=") > -1) {
     console.log("New login page")
 	clickButtonById('button_shib_login');
-}
-
-else if (window.location.href.indexOf("https://ilias.studium.kit.edu/login.php?target=root_1&client_id=produktiv&cmd=force_login&lang=de") > -1) {
+} else if (window.location.href.indexOf("https://ilias.studium.kit.edu/login.php?target=root_1&client_id=produktiv&cmd=force_login&lang=de") > -1) {
   console.log("Button Page URL detected");
   clickButtonById("button_shib_login");
   console.log("Clicked Button");
@@ -35,6 +31,11 @@ else if (window.location.href.indexOf("https://ilias.studium.kit.edu/login.php?t
 
 
 function detectMoreComplexUrl() {
+  if (document.getElementsByClassName("il-avatar").length > 0) {
+    // ILIAS is already logged in
+    return false
+  }
+	
   // return false for an URL to a forum Link
   if (window.location.href.toLowerCase().indexOf("https://ilias.studium.kit.edu/ilias.php?baseclass=ilrepositorygui&cmd=viewthread") > -1) {
     console.log("Forum Link detected, IliasLogin not executing because you should already be logged in.")
