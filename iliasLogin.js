@@ -1,15 +1,14 @@
-/// script to go through the ilias and campus pages
+/// script to go through the KIT ilias and campus pages
 
 //Original by phillip > https://addons.mozilla.org/de/firefox/addon/iliaslogin/
-//Just a quick fix for Ilias 7, very dirty, don't know anything about javascript :)
+//Fix for ilias_7 by BenedictLoe > https://github.com/BenedictLoe/iliasLogin_7
 
 if (window.location.href.indexOf("ilias.studium.kit.edu/login") > -1) {
   console.log("TestSimple URL detected");
-  //clickButtonById('f807');
   clickButtonById('button_shib_login');
 } else if (window.location.href.indexOf("campus.studium.kit.edu") > -1) {
   console.log("Campus URL detected");
-  setTimeout(function () { clickButtonByClass('shib-login shib-button'); }, 100); //
+  setTimeout(function () { clickButtonByClass('login-link ui-login'); }, 100); //
 } else if (window.location.href.indexOf("idp.scc.kit.edu") > -1) {
   // Careful, here chrome doesn't load the passwords in properly (Not exactly clear why)
   // Before clicking on submit, we will use a trick and click on some text beforehand.
@@ -17,27 +16,23 @@ if (window.location.href.indexOf("ilias.studium.kit.edu/login") > -1) {
   // only text, not an actual button. Index = 1 because with Index = 0 
   // is a class with a button in it which we do not want to click on
   clickButtonByClass('text full', 1);
-  
-  clickButtonById('sbmt'); // the actual button
+  setTimeout(function () { clickButtonById('sbmt'); }, 50); // the actual button
 } else if (detectMoreComplexUrl()) {
   console.log("Complex URL detected");
- /// clickButtonByClass('btn btn-bulky',2);
   clickListElement("il-maincontrols-metabar", 2)
 }
 
 else if (window.location.href.toLowerCase().indexOf("https://ilias.studium.kit.edu/login.php?client_id=produktiv&cmd=force_login&lang=") > -1) {
     console.log("New login page")
 	clickButtonById('button_shib_login');
-  }
-
+}
 
 else if (window.location.href.indexOf("https://ilias.studium.kit.edu/login.php?target=root_1&client_id=produktiv&cmd=force_login&lang=de") > -1) {
   console.log("Button Page URL detected");
   clickButtonById("button_shib_login");
   console.log("Clicked Button");
- // clickButtonByClass('btn btn-bulky',2);
-  //clickListElement("il-maincontrols-metabar", 2)
 }
+
 
 function detectMoreComplexUrl() {
   // return false for an URL to a forum Link
@@ -67,16 +62,6 @@ function clickButtonByClass(className, index = 0) {
 
 function clickListElement(listClass, elementNumber) {
   console.log("Replacing URL")
-  //setTimeout(function (){
-  
-  window.location.replace("https://ilias.studium.kit.edu/login.php?target=root_1&client_id=produktiv&cmd=force_login&lang=de");
-            
-//}, 100);
-  
-  //tagNameListElement = "li"
-  //urlElement = "a"
-  ///var listElement = document.getElementByClassName(listClass).getElementsByTagName(tagNameListElement)[elementNumber].getElementsByTagName(urlElement)[0]
-  //console.log("listElement URL: " + listElement + " about to be clicked")
-  //listElement.click()
+  window.location.replace("https://ilias.studium.kit.edu/ilias.php?baseClass=ilDashboardGUI&cmd=jumpToSelectedItems");
   console.log("listElement URL clicked on")
 }

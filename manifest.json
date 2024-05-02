@@ -1,8 +1,8 @@
 {
   "manifest_version": 2,
-  "name": "iliasLogin",
-  "version": "2.2.2",
-  "description": "Clicks through the ilias login pages automatically. This is just a quick and dirty fix for the addon by phillip: https://addons.mozilla.org/de/firefox/user/14993198/. I don't know any Javascript :)",
+  "name": "iliasLogin_8",
+  "version": "8.10",
+  "description": "Clicks through the ilias login pages automatically.",
   "icons": {
     "48": "icons/48pxIliasLogo.png"
   },
