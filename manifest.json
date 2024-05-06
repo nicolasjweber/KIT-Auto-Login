@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "KIT Auto-Login",
-  "version": "8.10.4",
+  "version": "8.10.5",
   "description": "Clicks through the KIT ILIAS & CAS Campus login pages automatically.",
   "icons": {
     "16": "icons/16.png",
