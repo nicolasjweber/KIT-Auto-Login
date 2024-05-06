@@ -1,16 +1,12 @@
 {
   "manifest_version": 2,
-  "name": "iliasLogin",
-  "version": "8.10.3",
-  "description": "Clicks through the ilias login pages automatically.",
+  "name": "KIT Auto-Login",
+  "version": "8.10.4",
+  "description": "Clicks through the KIT ILIAS & CAS Campus login pages automatically.",
   "icons": {
-    "48": "icons/48pxIliasLogo.png"
-  },
-  "browser_action": {
-    "default_icon": {
-      "16": "icons/16pxiliasLogo.png",
-      "32": "icons/32pxiliasLogo.png"
-    }
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
   },
   "content_scripts": [
     {
@@ -21,7 +17,7 @@
         "*://*.idp.scc.kit.edu/idp/profile*"
       ],
       "js": [
-        "iliasLogin.js"
+        "login.js"
       ]
     }
   ]
