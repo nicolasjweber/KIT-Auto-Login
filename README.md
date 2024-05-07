@@ -4,7 +4,7 @@ KIT Auto-Login is a **Firefox** addon which clicks you through the KIT ILIAS and
 
 ## Installation
 
-Latest version of the addon can be downloaded [here](https://github.com/nicolasjweber/KIT-Auto-Login/releases/latest).
+Latest version of the addon can be downloaded [on AMO](https://addons.mozilla.org/de/firefox/addon/kit-auto-login/). Additionally, individual releases will be uploaded here on GitHub as well.
 
 ## Contributing
 
