@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "KIT Auto-Login",
-  "version": "8.10.7",
+  "version": "8.11",
   "description": "Clicks through the KIT ILIAS & CAS Campus login pages automatically.",
   "icons": {
     "16": "icons/16.png",
@@ -14,7 +14,9 @@
         "*://*.ilias.studium.kit.edu/login*",
         "*://*.campus.studium.kit.edu/*",
         "*://*.ilias.studium.kit.edu/ilias.php*",
-        "*://*.idp.scc.kit.edu/idp/profile*"
+        "*://*.idp.scc.kit.edu/idp/profile*",
+		"*://*.lt2srv.iar.kit.edu/*",
+		"*://*.lecture-translator.kit.edu/*"
       ],
       "js": [
         "login.js"

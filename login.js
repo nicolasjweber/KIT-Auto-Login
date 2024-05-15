@@ -11,8 +11,12 @@ if (window.location.href.indexOf("https://idp.scc.kit.edu") > -1) {
 } else if (window.location.href.indexOf("https://campus.studium.kit.edu") > -1 && document.querySelectorAll('.login-status').length <= 1) {
   // CAS Campus is logged out
   document.querySelector('.login-link.ui-login').click()
-} 
-
+} else if (window.location.href.indexOf("https://lt2srv.iar.kit.edu/dex/auth") > -1) {
+  document.querySelector('a[href^="/dex/auth/shib"]').click()
+} else if ((window.location.href.indexOf("https://lt2srv.iar.kit.edu") > -1 || window.location.href.indexOf("https://lecture-translator.kit.edu") > -1) && document.querySelectorAll('a[href="/logout"]').length == 0) {
+  // Lecture Translator is logged out
+  document.querySelector('img[alt="Login"]').click()
+}
 
 function clickLoginWhenPopulated() {
   if (document.querySelector('#name').value == "" || document.querySelector('#password').value == "") {
