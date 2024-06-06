@@ -19,7 +19,7 @@ if (window.location.href.indexOf("https://idp.scc.kit.edu") > -1) {
 }
 
 function clickLoginWhenPopulated() {
-  if (document.querySelector('#name').value == "" || document.querySelector('#password').value == "") {
+  if (document.querySelector('#username').value == "" || document.querySelector('#password').value == "") {
     // fields not populated yet, so we have to wait
     setTimeout(clickLoginWhenPopulated, 50);
   } else {
