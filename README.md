@@ -1,6 +1,8 @@
 # KIT Auto-Login
 
-KIT Auto-Login is a **Firefox** addon which clicks you through the KIT ILIAS and CAS Campus login pages automatically. It is meant to be used by students at KIT. You need to have your password saved by the Firefox password manager.
+KIT Auto-Login is a **Firefox** extension that automatically clicks through various KIT login pages for you. It currently supports ILIAS, CAS Campus, and Lecture Translator.
+To enable fully automatic login, make sure that Firefox's built-in password manager is set to autofill your username and password.
+Fully working as of August 2025.
 
 ## Installation
 
