@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KIT Auto-Login",
-  "version": "9.16.1",
+  "version": "9.16.2",
   "description": "Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).",
   "browser_specific_settings": {
     "gecko": {
@@ -13,7 +13,19 @@
       "48": "icons/48.png",
       "128": "icons/128.png"
   },
-  "permissions": [],
+  "permissions": ["storage"],
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": false
+  },
+  "action": {
+    "default_popup": "options/options.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
+  },
   "content_scripts": [
     {
       "matches": ["https://idp.scc.kit.edu/*"],
@@ -49,6 +61,11 @@
       "matches": ["https://portal.wiwi.kit.edu/*"],
       "js": ["scripts/utils.js", "scripts/wiwi-portal.js"],
       "run_at": "document_idle"
-    }  
+    },
+    {
+      "matches": ["https://gitlab.kit.edu/*"],
+      "js": ["scripts/utils.js", "scripts/gitlab.js"],
+      "run_at": "document_idle"
+    }
   ]
 }

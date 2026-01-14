@@ -1,23 +1,41 @@
 # KIT Auto-Login
 
-KIT Auto-Login is a **Firefox** extension that automatically clicks through various KIT login pages for you. It supports various KIT login pages, including ILIAS, CAS Campus, Campus+ and Lecture Translator.
-To enable fully automatic login, make sure that the username and password are autofilled by your password manager (e.g. Firefox's built-in password manager).
-Fully working as of August 2025.
+## Features
+
+- **Automatic Login:** Automatically clicks through various KIT authentication pages
+- **Per-Site Control:** Enable or disable the extension for each supported site
+- **Works with Password Managers**
 
 ## Installation
 
-Latest version of the addon can be downloaded [on AMO](https://addons.mozilla.org/de/firefox/addon/kit-auto-login/). Additionally, individual releases will be uploaded here on GitHub as well.
+- **Firefox:** [Get it on AMO](https://addons.mozilla.org/de/firefox/addon/kit-auto-login/)
+- **Chromium:** Support is upcoming. Manual installation should be possible for now.
+
+## Prerequisites
+Important: This extension clicks the buttons, but it **does not store your passwords**. For fully automatic login, ensure your browser or password manager is configured to autofill your KIT username and password.
+
+
+## Supported Sites
+
+- KIT Shibboleth Identity Provider (idp.scc.kit.edu)
+- ILIAS (ilias.studium.kit.edu)
+- Campus Management (campus.studium.kit.edu)
+- Campus Plus (plus.campus.kit.edu)
+- WiWi Portal (portal.wiwi.kit.edu)
+- Lecture Translator (lt2srv.iar.kit.edu)
+- Bewerbungsportal (bewerbung.studium.kit.edu)
+- GitLab (gitlab.kit.edu)
+
+You can enable or disable specific sites in the extension settings.
 
 ## Contributing
 
-You are welcome to make a push request. But if you prefer you can also just fork it, I do not mind at all.
+Please feel free to open a pull request or open an issue to report a bug.
+
+
 
 ## Credits
 
-Icon from [Feather Icons](https://github.com/feathericons/feather)
-
-## Previous versions
-
-Original by [philippweinmann](https://github.com/philippweinmann/iliasLogin)
-
-Fix for ILIAS v7.x by [BenedictLoe](https://github.com/BenedictLoe/iliasLogin_7)
+- Icon from [Feather Icons](https://github.com/feathericons/feather)
+- Original by [philippweinmann](https://github.com/philippweinmann/iliasLogin)
+- ILIAS v7.x fix by [BenedictLoe](https://github.com/BenedictLoe/iliasLogin_7)

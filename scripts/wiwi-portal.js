@@ -1,26 +1,39 @@
 // This runs ONLY on https://portal.wiwi.kit.edu/*
 
-const step1_Selector = 'a[href^="/account/login"]';
-const step2_Selector = 'a[href^="/api/account/login-oidc"]';
-const logoutSelector = 'a[href="/account/logout"]';
+shouldRun('wiwi_portal').then((allowed) => {
+    if (!allowed) return;
 
-const checkLoop = setInterval(() => {
+    const step1_Selector = 'a[href^="/account/login"]';
+    const step2_Selector = 'a[href^="/api/account/login-oidc"]';
+    const logoutSelector = 'a[href="/account/logout"]';
+    const loginPageUrl = "https://portal.wiwi.kit.edu/account/login";
 
-    if (document.querySelector(logoutSelector)) {
-        clearInterval(checkLoop);
-        return;
+    if (window.location.href.startsWith(loginPageUrl)) {
+        // On the login page, wait for the OIDC link
+        waitForElement(step2_Selector, (link) => {
+            link.click();
+        });
+    } else {
+        // We are on a general page.
+        // We wait for either the logout button (meaning we are done)
+        // or the login button (meaning we need to start).
+        let attempts = 0;
+        const check = setInterval(() => {
+            if (document.querySelector(logoutSelector)) {
+                clearInterval(check);
+                return;
+            }
+            
+            const loginBtn = document.querySelector(step1_Selector);
+            if (loginBtn) {
+                clearInterval(check);
+                loginBtn.click();
+                return;
+            }
+
+            if (attempts++ > 15) { // Stop checking after ~3 seconds
+                clearInterval(check);
+            }
+        }, 200);
     }
-
-    // Check for the OIDC button (Step 2)
-    if (clickIfPresent(step2_Selector)) {
-        clearInterval(checkLoop);
-        return;
-    }
-
-    // Check for the initial Login button (Step 1)
-    if (clickIfPresent(step1_Selector)) {
-        clearInterval(checkLoop);
-        return;
-    }
-
-}, 500);
+});

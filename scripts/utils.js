@@ -90,3 +90,49 @@ function waitForElementByText(tag, textOrArray, callback, maxRetries = 20) {
         }
     }, 500);
 }
+
+/**
+ * Checks if the addon is enabled for the given site key.
+ * @param {string} siteKey - The key identifying the site (e.g. 'ilias', 'campus').
+ * @returns {Promise<boolean>} - Resolves to true if enabled, false otherwise.
+ */
+function shouldRun(siteKey) {
+    return new Promise((resolve) => {
+        // Fallback for context where chrome/browser might check failed
+        const storageObj = (typeof browser !== 'undefined' ? browser : chrome).storage;
+        
+        if (!storageObj || !storageObj.local) {
+             // If permission is missing or API unavailable, run by default
+             resolve(true);
+             return;
+        }
+
+        const handleResult = (result) => {
+            if (chrome.runtime.lastError) {
+                // If checking fails, default to enabled
+                console.warn('KIT Auto-Login: Error reading settings', chrome.runtime.lastError);
+                resolve(true);
+                return;
+            }
+            const settings = (result && result.siteSettings) ? result.siteSettings : {};
+            // Default to true if not present in settings
+            if (settings.hasOwnProperty(siteKey)) {
+                resolve(settings[siteKey]);
+            } else {
+                resolve(true); 
+            }
+        };
+
+        try {
+            const result = storageObj.local.get('siteSettings');
+            if (result && typeof result.then === 'function') {
+                result.then(handleResult).catch(err => resolve(true));
+            } else {
+                storageObj.local.get('siteSettings', handleResult);
+            }
+        } catch (e) {
+            console.error(e);
+            resolve(true);
+        }
+    });
+}
