@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KIT Auto-Login",
-  "version": "9.16.2",
+  "version": "9.16.3",
   "description": "Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).",
   "browser_specific_settings": {
     "gecko": {
@@ -65,6 +65,11 @@
     {
       "matches": ["https://gitlab.kit.edu/*"],
       "js": ["scripts/utils.js", "scripts/gitlab.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://my.scc.kit.edu/*"],
+      "js": ["scripts/utils.js", "scripts/scc.js"],
       "run_at": "document_idle"
     }
   ]

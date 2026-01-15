@@ -1,9 +1,10 @@
 const sites = {
-  "idp": "KIT Shibboleth Identity Provider",
+  "idp": "Shibboleth Identity Provider",
   "ilias": "ILIAS",
   "campus": "Campus Management",
   "campus_plus": "Campus Plus Portal",
   "wiwi_portal": "WiWi Portal [WIP]",
+  "scc": "SCC Self-Service Portal",
   "lecture_translator": "Lecture Translator",
   "gitlab": "GitLab",
   "bewerbung": "Bewerbungsportal",

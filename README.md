@@ -2,17 +2,30 @@
 
 ## Features
 
-- **Automatic Login:** Automatically clicks through various KIT authentication pages
-- **Per-Site Control:** Enable or disable the extension for each supported site
-- **Works with Password Managers**
+- Automatic login for various KIT services
+- Works with Password Managers
+- Enable or disable the extension for each supported site individually
 
 ## Installation
 
-- **Firefox:** [Get it on AMO](https://addons.mozilla.org/de/firefox/addon/kit-auto-login/)
-- **Chromium:** Support is upcoming. Manual installation should be possible for now.
+### Firefox
+[Get it on AMO](https://addons.mozilla.org/de/firefox/addon/kit-auto-login/)
+
+### Chromium
+Support is upcoming. Manual installation should be possible for now.
+
+### iOS (Safari)
+Basic passkey-based support for iOS has been added recently.
+- If you didn't already, register a passkey for your account at [SCC Self-Service](http://my.scc.kit.edu/)
+- Install the app [Userscripts](https://apps.apple.com/de/app/userscripts/id1463298887) from the App Store
+- Activate the extension in the iOS Settings app
+- Copy `kit_auto_login_userscript.js` into the Userscripts directory on your iOS device
+- For each site where you want to use the auto-login, you need to manually allow Userscripts to run by pressing the extension button in Safari and granting access.
 
 ## Prerequisites
-Important: This extension clicks the buttons, but it **does not store your passwords**. For fully automatic login, ensure your browser or password manager is configured to autofill your KIT username and password.
+This extension clicks the buttons, but it **does not store your passwords or cookies**. For fully automatic login, ensure your browser or password manager is configured to autofill your KIT username and password.
+
+The iOS version works via Passkeys (because there seems to be no way of automatically filling in passwords without additional button presses), so make sure to register a Passkey for your account first.
 
 
 ## Supported Sites
@@ -21,8 +34,9 @@ Important: This extension clicks the buttons, but it **does not store your passw
 - ILIAS (ilias.studium.kit.edu)
 - Campus Management (campus.studium.kit.edu)
 - Campus Plus (plus.campus.kit.edu)
-- WiWi Portal (portal.wiwi.kit.edu)
-- Lecture Translator (lt2srv.iar.kit.edu)
+- SCC Self-Service Portal (my.scc.kit.edu)
+- WiWi Portal (portal.wiwi.kit.edu) [WIP]
+- Lecture Translator (lecture-translator.kit.edu)
 - Bewerbungsportal (bewerbung.studium.kit.edu)
 - GitLab (gitlab.kit.edu)
 
