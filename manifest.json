@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "KIT Auto-Login",
-  "version": "2026.2.1",
-  "description": "Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services). Make sure a password manager (like Firefox's build-in one) is configured to autofill your username and password.",
+  "version": "2026.2.2",
+  "description": "Zero-click login for KIT services. Automatically clicks through the login for ILIAS, CAS Campus, and other portals.",
   "browser_specific_settings": {
     "gecko": {
       "id": "{37143706-86ed-480c-940c-7353399874cc}"
@@ -33,10 +33,7 @@
       "run_at": "document_end"
     },
     {
-      "matches": [
-        "https://ilias.studium.kit.edu/*",
-        "https://koala.kit.edu/*"
-      ],
+      "matches": ["https://ilias.studium.kit.edu/*", "https://koala.kit.edu/*"],
       "js": ["scripts/utils.js", "scripts/ilias.js"],
       "run_at": "document_idle"
     },

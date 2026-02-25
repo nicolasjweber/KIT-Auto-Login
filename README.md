@@ -51,6 +51,5 @@ Please feel free to open a pull request or open an issue to report a bug.
 
 ## Credits
 
-- Icon from [Feather Icons](https://github.com/feathericons/feather)
 - Original by [philippweinmann](https://github.com/philippweinmann/iliasLogin)
 - ILIAS v7.x fix by [BenedictLoe](https://github.com/BenedictLoe/iliasLogin_7)

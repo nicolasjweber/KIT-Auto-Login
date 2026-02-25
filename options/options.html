@@ -44,6 +44,24 @@
       margin: 0;
       color: var(--primary-color);
       font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      line-height: 1;
+    }
+
+    .header-icon {
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+
+    #version {
+      color: #888;
+      font-size: 0.8rem;
+      font-weight: normal;
+      margin-left: 8px;
+      align-self: flex-end;
+      margin-bottom: 2px;
     }
 
     .toolbar {
@@ -169,7 +187,11 @@
 <body>
   <div class="container">
     <header>
-      <h1>KIT Auto-Login <small id="version" style="color: #888; font-size: 0.8rem; font-weight: normal; margin-left: 8px;"></small></h1>
+      <h1>
+        <img src="../icons/icon.svg" alt="Icon" class="header-icon">
+        <span>KIT Auto-Login</span>
+        <small id="version"></small>
+      </h1>
     </header>
     
     <div class="toolbar">
