@@ -80,7 +80,18 @@ function restoreOptions() {
         // Label
         const labelEl = document.createElement('a'); // Changed to 'a' tag
         labelEl.className = 'option-label';
-        labelEl.textContent = siteInfo.label;
+        
+        // Icon
+        const icon = document.createElement('img');
+        const hostname = new URL(siteInfo.url).hostname;
+        // Use DuckDuckGo's favicon service which often provides better quality/larger icons than Google
+        icon.src = `https://icons.duckduckgo.com/ip3/${hostname}.ico`;
+        icon.className = 'site-icon';
+        labelEl.appendChild(icon);
+        
+        const textNode = document.createTextNode(siteInfo.label);
+        labelEl.appendChild(textNode);
+
         labelEl.href = siteInfo.url;
         labelEl.target = '_blank';
 

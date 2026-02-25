@@ -114,12 +114,24 @@
       flex-grow: 1;
       text-decoration: none;
       color: inherit;
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .site-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      object-fit: contain;
     }
 
     .option-label:hover {
       color: var(--primary-color);
-      text-decoration: underline;
+    }
+
+    .option-label:hover .site-icon {
+        opacity: 0.8;
     }
 
     /* Switch CSS */
