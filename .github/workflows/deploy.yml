@@ -1,0 +1,30 @@
+name: Publish to AMO
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  sign-and-submit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install web-ext
+        run: npm install --global web-ext
+
+      - name: Sign and Publish
+        run: |
+          web-ext sign \
+            --channel=listed \
+            --source-dir=. \
+            --ignore-files "kit_auto_login_userscript.js" "README.md" ".gitignore" "xpi/" \
+            --api-key=${{ secrets.AMO_JWT_ISSUER }} \
+            --api-secret=${{ secrets.AMO_JWT_SECRET }}

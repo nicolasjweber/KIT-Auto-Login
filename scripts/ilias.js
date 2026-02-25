@@ -1,13 +1,15 @@
-// This runs ONLY on https://ilias.studium.kit.edu/*
+// This runs ONLY on ILIAS and Koala
 
-shouldRun('ilias').then((allowed) => {
+const siteKey = window.location.hostname.includes('ilias') ? 'ilias' : 'koala';
+
+shouldRun(siteKey).then((allowed) => {
     if (!allowed) return;
 
     const isLoggedIn = document.querySelectorAll(".il-avatar").length > 0;
     const onLoginPage = window.location.href.includes("/login");
 
     if (!isLoggedIn) {
-        if (onLoginPage) {
+        if (onLoginPage || siteKey === 'koala') {
             // Step 2: On the specific login selection page
             clickIfPresent('#button_shib_login');
         } else {

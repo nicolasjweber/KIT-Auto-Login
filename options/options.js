@@ -8,6 +8,7 @@ const sites = {
   "lecture_translator": "Lecture Translator",
   "gitlab": "GitLab",
   "bewerbung": "Bewerbungsportal",
+  "koala": "KOALA",
 };
 
 // Default settings (all enabled)
@@ -122,6 +123,12 @@ function restoreOptions() {
 
 document.addEventListener('DOMContentLoaded', () => {
   restoreOptions();
+  
+  // Display version
+  const manifest = (typeof browser !== 'undefined' ? browser : chrome).runtime.getManifest();
+  const verEl = document.getElementById('version');
+  if (verEl) verEl.textContent = `v${manifest.version}`;
+
   const btnEnable = document.getElementById('enable-all');
   if (btnEnable) btnEnable.addEventListener('click', enableAll);
   const btnDisable = document.getElementById('disable-all');
