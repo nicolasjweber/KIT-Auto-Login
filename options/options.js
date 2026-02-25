@@ -1,14 +1,14 @@
 const sites = {
-  "idp": "Shibboleth Identity Provider",
-  "ilias": "ILIAS",
-  "campus": "Campus Management",
-  "campus_plus": "Campus Plus Portal",
-  "wiwi_portal": "WiWi Portal [WIP]",
-  "scc": "SCC Self-Service Portal",
-  "lecture_translator": "Lecture Translator",
-  "gitlab": "GitLab",
-  "bewerbung": "Bewerbungsportal",
-  "koala": "KOALA",
+  "idp": { label: "Shibboleth Identity Provider", url: "https://idp.scc.kit.edu" },
+  "ilias": { label: "ILIAS", url: "https://ilias.studium.kit.edu" },
+  "campus": { label: "Campus Management", url: "https://campus.studium.kit.edu" },
+  "campus_plus": { label: "Campus Plus Portal", url: "https://plus.campus.kit.edu" },
+  "wiwi_portal": { label: "WiWi Portal [WIP]", url: "https://portal.wiwi.kit.edu" },
+  "scc": { label: "SCC Self-Service Portal", url: "https://my.scc.kit.edu" },
+  "lecture_translator": { label: "Lecture Translator", url: "https://lecture-translator.kit.edu" },
+  "gitlab": { label: "GitLab", url: "https://gitlab.kit.edu" },
+  "bewerbung": { label: "Bewerbungsportal", url: "https://bewerbung.studium.kit.edu" },
+  "koala": { label: "KOALA", url: "https://koala.kit.edu" },
 };
 
 // Default settings (all enabled)
@@ -73,20 +73,16 @@ function restoreOptions() {
       container.removeChild(container.firstChild);
     }
 
-    for (const [key, label] of Object.entries(sites)) {
+    for (const [key, siteInfo] of Object.entries(sites)) {
         const div = document.createElement('div');
         div.className = 'option-card';
         
         // Label
-        const labelEl = document.createElement('div');
+        const labelEl = document.createElement('a'); // Changed to 'a' tag
         labelEl.className = 'option-label';
-        labelEl.textContent = label;
-        labelEl.onclick = () => {
-          // Toggle checkbox when clicking label area
-          const cb = document.getElementById(key);
-          cb.checked = !cb.checked;
-          saveOptions();
-        };
+        labelEl.textContent = siteInfo.label;
+        labelEl.href = siteInfo.url;
+        labelEl.target = '_blank';
 
         // Switch container
         const switchLabel = document.createElement('label');
