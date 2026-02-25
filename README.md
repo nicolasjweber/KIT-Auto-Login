@@ -3,7 +3,7 @@
 ## Features
 
 - Automatic login for various KIT services (zero-click on desktop, one-click on iOS)
-- Works with various Password Managers
+- Works with various password managers
 - Enable or disable the extension for each supported site individually
 
 ## Installation

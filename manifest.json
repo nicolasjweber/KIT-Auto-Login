@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KIT Auto-Login",
-  "version": "2026.2.0",
+  "version": "2026.2.1",
   "description": "Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services). Make sure a password manager (like Firefox's build-in one) is configured to autofill your username and password.",
   "browser_specific_settings": {
     "gecko": {

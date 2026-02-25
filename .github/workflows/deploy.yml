@@ -1,9 +1,12 @@
-name: Publish to AMO
+name: Publish to AMO & GitHub
 
 on:
   push:
     tags:
       - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   sign-and-submit:
@@ -21,10 +24,27 @@ jobs:
         run: npm install --global web-ext
 
       - name: Sign and Publish
+        id: sign
         run: |
           web-ext sign \
             --channel=listed \
             --source-dir=. \
             --ignore-files "kit_auto_login_userscript.js" "README.md" ".gitignore" "xpi/" \
             --api-key=${{ secrets.AMO_JWT_ISSUER }} \
-            --api-secret=${{ secrets.AMO_JWT_SECRET }}
+            --api-secret=${{ secrets.AMO_JWT_SECRET }} \
+            --artifacts-dir=./web-ext-artifacts
+
+      - name: Extract Release Notes
+        id: extract_notes
+        run: |
+          git fetch --tags --force
+          git tag -l --format='%(contents)' ${{ github.ref_name }} > RELEASE_NOTES.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            web-ext-artifacts/*.xpi
+            kit_auto_login_userscript.js
+          body_path: RELEASE_NOTES.md

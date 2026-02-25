@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name        KIT Auto-Login
-// @version     9.16.3
+// @version     2026.2.1
 // @description Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).
 // @author      nicolasjweber
 // @match       https://idp.scc.kit.edu/*
 // @match       https://ilias.studium.kit.edu/*
+// @match       https://koala.kit.edu/*
 // @match       https://campus.studium.kit.edu/*
 // @match       https://lt2srv.iar.kit.edu/*
 // @match       https://lecture-translator.kit.edu/*
@@ -108,14 +109,16 @@
         });
     }
 
-    // 2. ILIAS
-    if (matchDomain('ilias.studium.kit.edu')) {
-        shouldRun('ilias').then((allowed) => {
+    // 2. ILIAS & Koala
+    if (matchDomain('ilias.studium.kit.edu') || matchDomain('koala.kit.edu')) {
+        const siteKey = matchDomain('koala.kit.edu') ? 'koala' : 'ilias';
+        shouldRun(siteKey).then((allowed) => {
             if (!allowed) return;
+
             const isLoggedIn = document.querySelectorAll(".il-avatar").length > 0;
             const onLoginPage = href.includes("/login");
             if (!isLoggedIn) {
-                if (onLoginPage) {
+                if (onLoginPage || siteKey === 'koala') {
                     clickIfPresent('#button_shib_login');
                 } else {
                     clickIfPresent('.header-inner a[href*="login.php"]');
