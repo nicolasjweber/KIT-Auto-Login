@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        KIT Auto-Login
-// @version     2026.2.3
+// @version     2026.2.5
 // @description Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).
 // @author      nicolasjweber
 // @match       https://idp.scc.kit.edu/*

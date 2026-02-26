@@ -61,6 +61,23 @@ function setAllSites(value) {
 function enableAll() { setAllSites(true); }
 function disableAll() { setAllSites(false); }
 
+function toggleDarkMode() {
+  const isDark = document.body.classList.toggle('dark-mode');
+  const btn = document.getElementById('toggle-dark-mode');
+  if (btn) {
+    btn.textContent = isDark ? '☀️' : '🌙';
+  }
+  
+  const storage = getStorage();
+  const data = { darkMode: isDark };
+  const result = storage.local.set(data);
+  if (result && typeof result.then === 'function') {
+      result.then(showStatus);
+  } else {
+      showStatus();
+  }
+}
+
 function restoreOptions() {
   const container = document.getElementById('options-container');
   const storage = getStorage();
@@ -119,12 +136,36 @@ function restoreOptions() {
       }
   };
 
-  const result = storage.local.get('siteSettings');
+  const result = storage.local.get(['siteSettings', 'darkMode']);
   if (result && typeof result.then === 'function') {
-      result.then(render);
+      result.then((res) => {
+          render(res);
+          applyDarkMode(res.darkMode);
+      });
   } else {
       // Older Chrome callback
-      storage.local.get('siteSettings', render);
+      storage.local.get(['siteSettings', 'darkMode'], (res) => {
+          render(res);
+          applyDarkMode(res.darkMode);
+      });
+  }
+}
+
+function applyDarkMode(isDark) {
+  // Default to system preference if not set
+  if (isDark === undefined) {
+    isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  
+  if (isDark) {
+    document.body.classList.add('dark-mode');
+  } else {
+    document.body.classList.remove('dark-mode');
+  }
+  
+  const btn = document.getElementById('toggle-dark-mode');
+  if (btn) {
+    btn.textContent = isDark ? '☀️' : '🌙';
   }
 }
 
@@ -140,4 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnEnable) btnEnable.addEventListener('click', enableAll);
   const btnDisable = document.getElementById('disable-all');
   if (btnDisable) btnDisable.addEventListener('click', disableAll);
+  const btnToggleDark = document.getElementById('toggle-dark-mode');
+  if (btnToggleDark) btnToggleDark.addEventListener('click', toggleDarkMode);
 });

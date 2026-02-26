@@ -10,6 +10,23 @@
       --card-bg: #ffffff;
       --text-color: #333333;
       --border-color: #e0e0e0;
+      --button-hover-bg: #f8f9fa;
+      --button-hover-border: #bbb;
+      --site-icon-bg: #fff;
+      --slider-bg: #d1d5db;
+      --link-hover-color: #007d6c;
+    }
+
+    body.dark-mode {
+      --bg-color: #121212;
+      --card-bg: #1e1e1e;
+      --text-color: #e0e0e0;
+      --border-color: #333333;
+      --button-hover-bg: #2a2a2a;
+      --button-hover-border: #555;
+      --site-icon-bg: #e0e0e0;
+      --slider-bg: #555;
+      --link-hover-color: #00b39b;
     }
 
     * {
@@ -76,7 +93,7 @@
     button {
       flex: 1;
       justify-content: center;
-      background-color: white;
+      background-color: var(--card-bg);
       border: 1px solid var(--border-color);
       color: var(--text-color);
       padding: 10px 16px;
@@ -92,8 +109,8 @@
     }
 
     button:hover {
-      background-color: #f8f9fa;
-      border-color: #bbb;
+      background-color: var(--button-hover-bg);
+      border-color: var(--button-hover-border);
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
@@ -122,6 +139,12 @@
       background-color: rgba(211, 47, 47, 0.05);
     }
 
+    #toggle-dark-mode {
+      flex: 0 0 auto;
+      padding: 10px 14px;
+      font-size: 1.2rem;
+    }
+
     /* Toggle Switch Style */
     .option-card {
       background: var(--card-bg);
@@ -143,7 +166,7 @@
     .option-card:hover {
       box-shadow: 0 4px 8px rgba(0,0,0,0.08);
       transform: translateY(-1px);
-      border-color: #d0d0d0;
+      border-color: var(--button-hover-border);
     }
 
     .option-label {
@@ -165,7 +188,7 @@
       height: 28px;
       border-radius: 6px;
       object-fit: contain;
-      background-color: #fff;
+      background-color: var(--site-icon-bg);
       padding: 2px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       transition: transform 0.2s ease;
@@ -201,7 +224,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: #d1d5db;
+      background-color: var(--slider-bg);
       transition: .3s cubic-bezier(0.4, 0.0, 0.2, 1);
       border-radius: 34px;
       box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
@@ -274,7 +297,7 @@
     }
 
     footer a:hover {
-      color: #007d6c;
+      color: var(--link-hover-color);
       text-decoration: underline;
     }
   </style>
@@ -291,6 +314,7 @@
     <div class="toolbar">
       <button id="enable-all">Enable All</button>
       <button id="disable-all">Disable All</button>
+      <button id="toggle-dark-mode" title="Toggle Dark Mode">🌙</button>
     </div>
 
     <div id="options-container">
