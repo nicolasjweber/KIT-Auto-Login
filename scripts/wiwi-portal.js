@@ -6,34 +6,41 @@ shouldRun('wiwi_portal').then((allowed) => {
     const step1_Selector = 'a[href^="/account/login"]';
     const step2_Selector = 'a[href^="/api/account/login-oidc"]';
     const logoutSelector = 'a[href="/account/logout"]';
-    const loginPageUrl = "https://portal.wiwi.kit.edu/account/login";
+    
+    let clickedStep1 = false;
+    let clickedStep2 = false;
 
-    if (window.location.href.startsWith(loginPageUrl)) {
-        // On the login page, wait for the OIDC link
-        waitForElement(step2_Selector, (link) => {
-            link.click();
-        });
-    } else {
-        // We are on a general page.
-        // We wait for either the logout button (meaning we are done)
-        // or the login button (meaning we need to start).
-        let attempts = 0;
-        const check = setInterval(() => {
-            if (document.querySelector(logoutSelector)) {
-                clearInterval(check);
-                return;
-            }
-            
-            const loginBtn = document.querySelector(step1_Selector);
-            if (loginBtn) {
-                clearInterval(check);
-                loginBtn.click();
-                return;
-            }
+    function checkDOM() {
+        if (document.querySelector(logoutSelector)) {
+            return true; 
+        }
+        
+        // Step 2: We are on the login page, click the OIDC login button
+        const step2Btn = document.querySelector(step2_Selector);
+        if (step2Btn && !clickedStep2) {
+            clickedStep2 = true;
+            step2Btn.click();
+        }
 
-            if (attempts++ > 15) { // Stop checking after ~3 seconds
-                clearInterval(check);
-            }
-        }, 200);
+        // Step 1: We are on the main page, click the initial login button
+        const step1Btn = document.querySelector(step1_Selector);
+        if (step1Btn && !clickedStep1) {
+            clickedStep1 = true;
+            step1Btn.click();
+        }
+        
+        return false;
     }
+
+    if (checkDOM()) return;
+
+    // Use a MutationObserver to watch for page changes
+    const observer = new MutationObserver(() => {
+        if (checkDOM()) {
+            // Stop observing once logged in
+            observer.disconnect();
+        }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
 });

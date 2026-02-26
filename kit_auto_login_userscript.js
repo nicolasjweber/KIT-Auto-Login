@@ -186,30 +186,38 @@
             const step1_Selector = 'a[href^="/account/login"]';
             const step2_Selector = 'a[href^="/api/account/login-oidc"]';
             const logoutSelector = 'a[href="/account/logout"]';
-            const loginPageUrl = "https://portal.wiwi.kit.edu/account/login";
 
-            if (href.startsWith(loginPageUrl)) {
-                waitForElement(step2_Selector, (link) => {
-                    link.click();
-                });
-            } else {
-                let attempts = 0;
-                const check = setInterval(() => {
-                    if (document.querySelector(logoutSelector)) {
-                        clearInterval(check);
-                        return;
-                    }
-                    const loginBtn = document.querySelector(step1_Selector);
-                    if (loginBtn) {
-                        clearInterval(check);
-                        loginBtn.click();
-                        return;
-                    }
-                    if (attempts++ > 15) { 
-                        clearInterval(check);
-                    }
-                }, 200);
+            let clickedStep1 = false;
+            let clickedStep2 = false;
+
+            function checkDOM() {
+                if (document.querySelector(logoutSelector)) {
+                    return true; 
+                }
+                
+                const step2Btn = document.querySelector(step2_Selector);
+                if (step2Btn && !clickedStep2) {
+                    clickedStep2 = true;
+                    step2Btn.click();
+                }
+
+                const step1Btn = document.querySelector(step1_Selector);
+                if (step1Btn && !clickedStep1) {
+                    clickedStep1 = true;
+                    step1Btn.click();
+                }
+                return false;
             }
+
+            if (checkDOM()) return;
+
+            const observer = new MutationObserver(() => {
+                if (checkDOM()) {
+                    observer.disconnect();
+                }
+            });
+
+            observer.observe(document.body, { childList: true, subtree: true });
         });
     }
 
