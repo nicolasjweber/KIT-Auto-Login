@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        KIT Auto-Login
-// @version     2026.2.7
+// @version     2026.2.9
 // @description Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).
 // @author      nicolasjweber
 // @match       https://idp.scc.kit.edu/*
@@ -15,6 +15,9 @@
 // @match       https://gitlab.kit.edu/*
 // @match       https://my.scc.kit.edu/*
 // @match       https://fels.scc.kit.edu/*
+// @match       https://login.bwidm.de/*
+// @match       https://hub.bwjupyter.de/*
+// @match       https://bwsyncandshare.kit.edu/*
 // @run-at      document-idle
 // @grant       none
 // ==/UserScript==
@@ -251,39 +254,66 @@
         });
     }
 
-    // 10. FeLS
-    if (matchDomain('fels.scc.kit.edu')) {
-        shouldRun('fels').then((allowed) => {
+    // 10. Federated Login (FeLS & bwIDM)
+    if (matchDomain('fels.scc.kit.edu') || matchDomain('login.bwidm.de')) {
+        const siteKey = matchDomain('login.bwidm.de') ? 'bwidm' : 'fels';
+        shouldRun(siteKey).then((allowed) => {
             if (!allowed) return;
 
             waitForElement('#searchAutocompl_input', (inputField) => {
                 if (!inputField.value) {
-                    inputField.focus();
-                    inputField.value = 'KIT';
-                    
-                    // Trigger PrimeFaces autocomplete search via the widget API
-                    var widget = PrimeFaces.getWidgetById('searchAutocompl');
-                    if (widget && widget.search) {
-                        widget.search('KIT');
-                    } else {
-                        inputField.dispatchEvent(new Event('input', { bubbles: true }));
-                        inputField.dispatchEvent(new Event('change', { bubbles: true }));
-                        PrimeFaces.ab({s:"searchAutocompl",e:"change",f:"form",p:"searchAutocompl",u:"infoPnl"});
-                    }
-                    
-                    // Wait for autocomplete results to appear, then select with Enter
-                    setTimeout(function() {
-                        inputField.dispatchEvent(new KeyboardEvent('keydown', {
-                            bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13
-                        }));
-                        
-                        // Click the login button after item is selected
-                        setTimeout(function() {
-                            PrimeFaces.ab({s:"login",f:"form",u:"form"});
-                        }, 500);
-                    }, 500);
+                    const script = document.createElement('script');
+                    script.textContent = `
+                        (function() {
+                            var input = document.getElementById('searchAutocompl_input');
+                            if (!input) return;
+                            
+                            input.focus();
+                            input.value = 'KIT';
+                            
+                            // Trigger PrimeFaces autocomplete search
+                            var widget = PrimeFaces.getWidgetById('searchAutocompl');
+                            if (widget && widget.search) {
+                                widget.search('KIT');
+                            } else {
+                                // Fallback
+                                input.dispatchEvent(new Event('input', { bubbles: true }));
+                                input.dispatchEvent(new Event('change', { bubbles: true }));
+                                PrimeFaces.ab({s:"searchAutocompl",e:"change",f:"form",p:"searchAutocompl",u:"infoPnl"});
+                            }
+                            
+                            // Need to wait for autocomplete results to appear
+                            setTimeout(function() {
+                                input.dispatchEvent(new KeyboardEvent('keydown', {
+                                    bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13
+                                }));
+                                
+                                setTimeout(function() {
+                                    PrimeFaces.ab({s:"login",f:"form",u:"form"});
+                                }, 500);
+                            }, 500);
+                        })();
+                    `;
+                    document.documentElement.appendChild(script);
+                    script.remove();
                 }
             });
+        });
+    }
+
+    // 11. bwJupyter
+    if (matchDomain('hub.bwjupyter.de')) {
+        shouldRun('bwjupyter').then((allowed) => {
+            if (!allowed) return;
+            clickIfPresent('a[href^="/hub/oauth_login"]');
+        });
+    }
+
+    // 12. bwSync&Share
+    if (matchDomain('bwsyncandshare.kit.edu')) {
+        shouldRun('bwsyncandshare').then((allowed) => {
+            if (!allowed) return;
+            clickIfPresent('a[href*="/apps/user_saml/saml/login"]');
         });
     }
 
