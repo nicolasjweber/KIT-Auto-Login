@@ -6,6 +6,7 @@ const sites = {
   "wiwi_portal": { label: "WiWi Portal", url: "https://portal.wiwi.kit.edu" },
   "scc": { label: "SCC Self-Service", url: "https://my.scc.kit.edu" },
   "bwjupyter": { label: "bwJupyter", url: "https://hub.bwjupyter.de" },
+  "bwsyncandshare": { label: "bwSync&Share", url: "https://bwsyncandshare.kit.edu" },
   "gitlab": { label: "GitLab", url: "https://gitlab.kit.edu" },
   "bewerbung": { label: "Bewerbungsportal", url: "https://bewerbung.studium.kit.edu" },
   "lecture_translator": { label: "Lecture Translator", url: "https://lecture-translator.kit.edu" },
