@@ -13,11 +13,11 @@
 ### Firefox
 [Get it on Mozilla Add-ons (AMO)](https://addons.mozilla.org/de/firefox/addon/kit-auto-login/)
 
-### Chromium
-Supported. Manual installation via developer mode is possible for now.
+### Chromium (Chrome, Edge, etc.)
+[Get it on Chrome Web Store](https://chromewebstore.google.com/detail/kit-auto-login/ldnjffkimlpofjanbfdipcannfaloabd)
 
 ### iOS (Safari)
-Basic passkey-based support for iOS has been added recently.
+Passkey-based support for one-click logins is provided.
 1. If you haven't already, register a passkey for your account at the [SCC Self-Service Portal](http://my.scc.kit.edu/).
 2. Install the [Userscripts](https://apps.apple.com/de/app/userscripts/id1463298887) app from the App Store.
 3. Activate the Userscripts Safari extension in the iOS Settings app.
@@ -44,5 +44,5 @@ Contributions are welcome! Please feel free to open a pull request or open an is
 
 ## Credits
 
-- Original extension by [philippweinmann](https://github.com/philippweinmann/iliasLogin)
+- Original idea and extension by [philippweinmann](https://github.com/philippweinmann/iliasLogin)
 - ILIAS v7.x fix by [BenedictLoe](https://github.com/BenedictLoe/iliasLogin_7)

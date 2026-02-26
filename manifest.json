@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KIT Auto-Login",
-  "version": "2026.2.6",
+  "version": "2026.2.7",
   "description": "Zero-click login for KIT services. Automatically clicks through the login for ILIAS, CAS Campus, and other portals.",
   "browser_specific_settings": {
     "gecko": {
