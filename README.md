@@ -1,14 +1,17 @@
-# KIT Auto-Login
+<div align="center">
+  <h1>KIT Auto-Login</h1>
+  <img src="icons/icon.svg" alt="KIT Auto-Login Icon" width="128" />
+</div>
 
-> **Disclaimer:** This extension is an independent, open-source project and is **not** affiliated with, endorsed by, or officially connected to the Karlsruhe Institute of Technology (KIT) in any way.
+<br />
 
-## Features
 
 - **Automatic Login:** Zero-click login on desktop and one-click login on iOS for various KIT services
 - Works seamlessly with your existing password managers
 - Enable or disable the extension for each supported site individually
 
 ## Installation
+> **Disclaimer:** This extension is an independent, open-source project and is **not** affiliated with, endorsed by, or officially connected to the Karlsruhe Institute of Technology (KIT) in any way.
 
 ### Firefox
 [Get it on Mozilla Add-ons (AMO)](https://addons.mozilla.org/de/firefox/addon/kit-auto-login/)
