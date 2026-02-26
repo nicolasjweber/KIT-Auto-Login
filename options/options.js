@@ -5,12 +5,13 @@ const sites = {
   "campus_plus": { label: "Campus Plus Portal", url: "https://plus.campus.kit.edu" },
   "wiwi_portal": { label: "WiWi Portal", url: "https://portal.wiwi.kit.edu" },
   "scc": { label: "SCC Self-Service", url: "https://my.scc.kit.edu" },
-  "lecture_translator": { label: "Lecture Translator", url: "https://lecture-translator.kit.edu" },
+  "bwjupyter": { label: "bwJupyter", url: "https://hub.bwjupyter.de" },
   "gitlab": { label: "GitLab", url: "https://gitlab.kit.edu" },
   "bewerbung": { label: "Bewerbungsportal", url: "https://bewerbung.studium.kit.edu" },
-  "koala": { label: "KOALA", url: "https://koala.kit.edu" },
+  "lecture_translator": { label: "Lecture Translator", url: "https://lecture-translator.kit.edu" },
   "fels": { label: "Federated Login Service (FeLS)", url: "https://fels.scc.kit.edu" },
   "bwidm": { label: "bwIDM", url: "https://login.bwidm.de" },
+  "koala": { label: "KOALA", url: "https://koala.kit.edu" },
 };
 
 // Default settings (all enabled)

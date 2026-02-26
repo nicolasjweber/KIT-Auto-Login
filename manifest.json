@@ -79,6 +79,11 @@
       "matches": ["https://fels.scc.kit.edu/*", "https://login.bwidm.de/*"],
       "js": ["scripts/utils.js", "scripts/federated_login.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://hub.bwjupyter.de/*"],
+      "js": ["scripts/utils.js", "scripts/bwjupyter.js"],
+      "run_at": "document_idle"
     }
   ]
 }
