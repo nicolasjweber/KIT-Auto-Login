@@ -14,7 +14,7 @@
 <div align="center">
 <a href="https://addons.mozilla.org/de/firefox/addon/kit-auto-login/"><img src="assets/badge_firefox_amo.svg" alt="Get the Add-on for Firefox" height="58" /></a>&emsp;
 <a href="https://chromewebstore.google.com/detail/kit-auto-login/ldnjffkimlpofjanbfdipcannfaloabd"><img src="assets/badge_chrome_web_store.png" alt="Available in the Chrome Web Store" height="58" /></a></a>&emsp;
-<a href="https://apps.apple.com/de/app/userscripts/id1463298887"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" height="58" /></a></div>
+<a href="https://apps.apple.com/de/app/userscripts/id1463298887"><img src="assets/badge_app_store.svg" alt="Download on the App Store" height="58" /></a></div>
 
 </br>
 <details>
