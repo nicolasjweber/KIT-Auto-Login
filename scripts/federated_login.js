@@ -1,6 +1,8 @@
-// This runs ONLY on https://fels.scc.kit.edu/*
+// This runs ONLY on https://fels.scc.kit.edu/* and https://login.bwidm.de/*
 
-shouldRun('fels').then(enabled => {
+const siteKey = window.location.hostname.includes('bwidm') ? 'bwidm' : 'fels';
+
+shouldRun(siteKey).then(enabled => {
     if (!enabled) return;
 
     waitForElement('#searchAutocompl_input', (inputField) => {

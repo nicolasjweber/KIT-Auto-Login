@@ -10,6 +10,7 @@ const sites = {
   "bewerbung": { label: "Bewerbungsportal", url: "https://bewerbung.studium.kit.edu" },
   "koala": { label: "KOALA", url: "https://koala.kit.edu" },
   "fels": { label: "Federated Login Service (FeLS)", url: "https://fels.scc.kit.edu" },
+  "bwidm": { label: "bwIDM", url: "https://login.bwidm.de" },
 };
 
 // Default settings (all enabled)
