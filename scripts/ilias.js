@@ -1,4 +1,4 @@
-// This runs ONLY on ILIAS and Koala
+// This runs ONLY on https://ilias.studium.kit.edu/* and https://koala.kit.edu/*
 
 const siteKey = window.location.hostname.includes('ilias') ? 'ilias' : 'koala';
 

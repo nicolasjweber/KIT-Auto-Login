@@ -3,12 +3,13 @@ const sites = {
   "ilias": { label: "ILIAS", url: "https://ilias.studium.kit.edu" },
   "campus": { label: "Campus Management", url: "https://campus.studium.kit.edu" },
   "campus_plus": { label: "Campus Plus Portal", url: "https://plus.campus.kit.edu" },
-  "wiwi_portal": { label: "WiWi Portal [WIP]", url: "https://portal.wiwi.kit.edu" },
-  "scc": { label: "SCC Self-Service Portal", url: "https://my.scc.kit.edu" },
+  "wiwi_portal": { label: "WiWi Portal", url: "https://portal.wiwi.kit.edu" },
+  "scc": { label: "SCC Self-Service", url: "https://my.scc.kit.edu" },
   "lecture_translator": { label: "Lecture Translator", url: "https://lecture-translator.kit.edu" },
   "gitlab": { label: "GitLab", url: "https://gitlab.kit.edu" },
   "bewerbung": { label: "Bewerbungsportal", url: "https://bewerbung.studium.kit.edu" },
   "koala": { label: "KOALA", url: "https://koala.kit.edu" },
+  "fels": { label: "Federated Login Service (FeLS)", url: "https://fels.scc.kit.edu" },
 };
 
 // Default settings (all enabled)

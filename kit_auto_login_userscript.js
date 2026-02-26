@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        KIT Auto-Login
-// @version     2026.2.5
+// @version     2026.2.6
 // @description Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).
 // @author      nicolasjweber
 // @match       https://idp.scc.kit.edu/*
@@ -14,6 +14,7 @@
 // @match       https://portal.wiwi.kit.edu/*
 // @match       https://gitlab.kit.edu/*
 // @match       https://my.scc.kit.edu/*
+// @match       https://fels.scc.kit.edu/*
 // @run-at      document-idle
 // @grant       none
 // ==/UserScript==
@@ -247,6 +248,42 @@
             if (document.querySelector(loginStatus)) return;
 
             clickIfPresent(loginSelector);
+        });
+    }
+
+    // 10. FeLS
+    if (matchDomain('fels.scc.kit.edu')) {
+        shouldRun('fels').then((allowed) => {
+            if (!allowed) return;
+
+            waitForElement('#searchAutocompl_input', (inputField) => {
+                if (!inputField.value) {
+                    inputField.focus();
+                    inputField.value = 'KIT';
+                    
+                    // Trigger PrimeFaces autocomplete search via the widget API
+                    var widget = PrimeFaces.getWidgetById('searchAutocompl');
+                    if (widget && widget.search) {
+                        widget.search('KIT');
+                    } else {
+                        inputField.dispatchEvent(new Event('input', { bubbles: true }));
+                        inputField.dispatchEvent(new Event('change', { bubbles: true }));
+                        PrimeFaces.ab({s:"searchAutocompl",e:"change",f:"form",p:"searchAutocompl",u:"infoPnl"});
+                    }
+                    
+                    // Wait for autocomplete results to appear, then select with Enter
+                    setTimeout(function() {
+                        inputField.dispatchEvent(new KeyboardEvent('keydown', {
+                            bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13
+                        }));
+                        
+                        // Click the login button after item is selected
+                        setTimeout(function() {
+                            PrimeFaces.ab({s:"login",f:"form",u:"form"});
+                        }, 500);
+                    }, 500);
+                }
+            });
         });
     }
 
