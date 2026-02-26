@@ -15,7 +15,7 @@
 
 ### Desktop
 
-<a href="https://addons.mozilla.org/de/firefox/addon/kit-auto-login/"><img src="https://blog.mozilla.org/addons/files/2020/04/get-the-addon-fx-apr-2020.svg" alt="Get the Add-on for Firefox" height="58" /></a>&emsp;<a href="https://chromewebstore.google.com/detail/kit-auto-login/ldnjffkimlpofjanbfdipcannfaloabd"><img src="https://developer.chrome.com/static/docs/webstore/branding/image/206x58-chrome-web-bcb82d15b2486.png" alt="Available in the Chrome Web Store" height="58" /></a>
+<a href="https://addons.mozilla.org/de/firefox/addon/kit-auto-login/"><img src="assets/badge_firefox_amo.svg" alt="Get the Add-on for Firefox" height="58" /></a>&emsp;<a href="https://chromewebstore.google.com/detail/kit-auto-login/ldnjffkimlpofjanbfdipcannfaloabd"><img src="assets/badge_chrome_web_store.png" alt="Available in the Chrome Web Store" height="58" /></a>
 
 ### iOS (Safari)
 Passkey-based support for one-click logins is provided.
