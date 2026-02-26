@@ -43,10 +43,10 @@ function saveOptions() {
 
 function showStatus() {
     const status = document.getElementById('status');
-    status.style.opacity = '1';
+    status.classList.add('show');
     setTimeout(() => {
-      status.style.opacity = '0';
-    }, 1500);
+      status.classList.remove('show');
+    }, 2000);
 }
 
 // Utility to set all site checkboxes to a value and save
