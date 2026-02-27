@@ -8,10 +8,10 @@ const sites = {
   "bwjupyter": { label: "bwJupyter", url: "https://hub.bwjupyter.de" },
   "bwsyncandshare": { label: "bwSync&Share", url: "https://bwsyncandshare.kit.edu" },
   "gitlab": { label: "GitLab", url: "https://gitlab.kit.edu" },
-  "bewerbung": { label: "Bewerbungsportal", url: "https://bewerbung.studium.kit.edu" },
+  "bewerbung": { label: "Application Portal", url: "https://bewerbung.studium.kit.edu" },
   "lecture_translator": { label: "Lecture Translator", url: "https://lecture-translator.kit.edu" },
-  "fels": { label: "Federated Login Service (FeLS)", url: "https://fels.scc.kit.edu" },
-  "bwidm": { label: "bwIDM", url: "https://login.bwidm.de" },
+  "fels": { label: "Federated Login Service", url: "https://fels.scc.kit.edu" },
+  "bwidm": { label: "Federated Identity Management", url: "https://login.bwidm.de" },
   "koala": { label: "KOALA", url: "https://koala.kit.edu" },
 };
 

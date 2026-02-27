@@ -18,14 +18,15 @@ jobs:
       - name: Build Chrome ZIP
         run: |
           mkdir -p artifacts
-          zip -r artifacts/kit_auto_login-chrome.zip \
+          VERSION=$(jq -r .version manifest.json)
+          zip -r artifacts/kit_auto_login-${VERSION}-chrome.zip \
             manifest.json icons/ options/ scripts/
 
       - name: Upload Chrome ZIP
         uses: actions/upload-artifact@v4
         with:
           name: chrome-zip
-          path: artifacts/kit_auto_login-chrome.zip
+          path: artifacts/kit_auto_login-*-chrome.zip
 
   firefox:
     needs: build
@@ -42,13 +43,17 @@ jobs:
       - name: Install web-ext
         run: npm install --global web-ext
 
+      - name: Prepare Firefox source
+        run: |
+          mkdir -p firefox-src
+          cp -r manifest.json icons/ options/ scripts/ firefox-src/
+
       - name: Sign and Publish to AMO
         id: sign
         run: |
           web-ext sign \
             --channel=listed \
-            --source-dir=. \
-            --ignore-files "kit_auto_login_userscript.js" "README.md" ".gitignore" "xpi/" \
+            --source-dir=./firefox-src \
             --api-key=${{ secrets.AMO_JWT_ISSUER }} \
             --api-secret=${{ secrets.AMO_JWT_SECRET }} \
             --artifacts-dir=./web-ext-artifacts
@@ -83,8 +88,9 @@ jobs:
 
       - name: Upload & Publish to Chrome Web Store
         run: |
+          ZIP_FILE=$(ls kit_auto_login-*-chrome.zip)
           chrome-webstore-upload upload \
-            --source kit_auto_login-chrome.zip \
+            --source $ZIP_FILE \
             --extension-id ${{ secrets.CHROME_EXTENSION_ID }} \
             --client-id ${{ secrets.CHROME_CLIENT_ID }} \
             --client-secret ${{ secrets.CHROME_CLIENT_SECRET }} \
