@@ -45,7 +45,7 @@ This extension automates the clicking of login buttons, but it **does not store 
 ## Screenshot & Supported Sites
 
 <p>
-  <img src="assets/screenshot.png" alt="Screenshot of the KIT Auto-Login options page showing supported sites" width="350" />
+  <img src="assets/screenshot_light.png" alt="Screenshot of the KIT Auto-Login options page showing supported sites" width="350" />
   <img src="assets/screenshot_dark.png" alt="Screenshot of the KIT Auto-Login options page showing supported sites" width="350" />
 </p>
 
