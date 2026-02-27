@@ -173,8 +173,68 @@ function applyDarkMode(isDark) {
   }
 }
 
+/**
+ * Collects all unique match-pattern origins declared in content_scripts.
+ * This avoids duplicating URLs — the manifest is the single source of truth.
+ */
+function getAllOrigins() {
+  const api = (typeof browser !== 'undefined' ? browser : chrome);
+  const manifest = api.runtime.getManifest();
+  const origins = new Set();
+  for (const cs of manifest.content_scripts || []) {
+    for (const match of cs.matches || []) {
+      origins.add(match);
+    }
+  }
+  return Array.from(origins);
+}
+
+/**
+ * Checks whether all required host permissions are granted.
+ * Shows or hides the permissions banner accordingly.
+ */
+async function checkPermissions() {
+  const api = (typeof browser !== 'undefined' ? browser : chrome);
+  const banner = document.getElementById('permissions-banner');
+  if (!banner) return;
+
+  try {
+    const origins = getAllOrigins();
+    const result = api.permissions.contains({ origins });
+
+    // Handle both promise-based (Firefox) and callback-based (older Chrome) APIs
+    const granted = (result && typeof result.then === 'function')
+      ? await result
+      : await new Promise(resolve => api.permissions.contains({ origins }, resolve));
+
+    banner.style.display = granted ? 'none' : 'flex';
+  } catch (e) {
+    console.warn('Could not check permissions:', e);
+    banner.style.display = 'none'; // hide if API unavailable
+  }
+}
+
+/**
+ * Requests all required host permissions. Must be called from a user gesture.
+ */
+async function requestPermissions() {
+  const api = (typeof browser !== 'undefined' ? browser : chrome);
+
+  try {
+    const origins = getAllOrigins();
+
+    api.permissions.request({ origins });
+
+    // Close the popup immediately so the browser's permission prompt is visible behind it
+    window.close();
+  } catch (e) {
+    console.error('Permission request failed:', e);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   restoreOptions();
+  checkPermissions();
   
   // Display version
   const manifest = (typeof browser !== 'undefined' ? browser : chrome).runtime.getManifest();
@@ -187,4 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnDisable) btnDisable.addEventListener('click', disableAll);
   const btnToggleDark = document.getElementById('toggle-dark-mode');
   if (btnToggleDark) btnToggleDark.addEventListener('click', toggleDarkMode);
+  const btnGrant = document.getElementById('grant-permissions');
+  if (btnGrant) btnGrant.addEventListener('click', requestPermissions);
 });
