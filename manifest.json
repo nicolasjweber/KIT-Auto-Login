@@ -76,7 +76,7 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://fels.scc.kit.edu/*", "https://login.bwidm.de/*"],
+      "matches": ["https://fels.scc.kit.edu/*", "https://login.bwidm.de/*", "https://bwidm.scc.kit.edu/*"],
       "js": ["scripts/utils.js", "scripts/federated_login.js"],
       "run_at": "document_idle"
     },

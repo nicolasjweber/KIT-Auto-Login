@@ -16,6 +16,7 @@
 // @match       https://my.scc.kit.edu/*
 // @match       https://fels.scc.kit.edu/*
 // @match       https://login.bwidm.de/*
+// @match       https://bwidm.scc.kit.edu/*
 // @match       https://hub.bwjupyter.de/*
 // @match       https://bwsyncandshare.kit.edu/*
 // @run-at      document-idle
@@ -255,13 +256,13 @@
     }
 
     // 10. Federated Login (FeLS & bwIDM)
-    if (matchDomain('fels.scc.kit.edu') || matchDomain('login.bwidm.de')) {
-        const siteKey = matchDomain('login.bwidm.de') ? 'bwidm' : 'fels';
+    if (matchDomain('fels.scc.kit.edu') || matchDomain('login.bwidm.de') || matchDomain('bwidm.scc.kit.edu')) {
+        const siteKey = (matchDomain('login.bwidm.de') || matchDomain('bwidm.scc.kit.edu')) ? 'bwidm' : 'fels';
         shouldRun(siteKey).then((allowed) => {
             if (!allowed) return;
 
-            waitForElement('#searchAutocompl_input', (inputField) => {
-                if (!inputField.value) {
+            waitForElement('#searchAutocompl_input, #selectBox_filter', (inputField) => {
+                if (inputField.id === 'searchAutocompl_input' && !inputField.value) {
                     const script = document.createElement('script');
                     script.textContent = `
                         (function() {
@@ -290,6 +291,44 @@
                                 
                                 setTimeout(function() {
                                     PrimeFaces.ab({s:"login",f:"form",u:"form"});
+                                }, 500);
+                            }, 500);
+                        })();
+                    `;
+                    document.documentElement.appendChild(script);
+                    script.remove();
+                } else if (inputField.id === 'selectBox_filter') {
+                    const script = document.createElement('script');
+                    script.textContent = `
+                        (function() {
+                            var input = document.getElementById('selectBox_filter');
+                            if (!input) return;
+                            
+                            input.focus();
+                            input.value = 'KIT';
+                            
+                            // Trigger PrimeFaces filter
+                            input.dispatchEvent(new Event('input', { bubbles: true }));
+                            input.dispatchEvent(new Event('change', { bubbles: true }));
+                            input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'T' }));
+                            
+                            // Need to wait for filter results to appear
+                            setTimeout(function() {
+                                var listItems = document.querySelectorAll('.ui-selectlistbox-item');
+                                for (var i = 0; i < listItems.length; i++) {
+                                    if (listItems[i].style.display !== 'none') {
+                                        listItems[i].click();
+                                        break;
+                                    }
+                                }
+                                
+                                setTimeout(function() {
+                                    var loginBtn = document.getElementById('login');
+                                    if (loginBtn) {
+                                        loginBtn.click();
+                                    } else {
+                                        PrimeFaces.ab({s:"login",f:"form",u:"form"});
+                                    }
                                 }, 500);
                             }, 500);
                         })();
