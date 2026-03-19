@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KIT Auto-Login",
-  "version": "2026.3.1",
+  "version": "2026.3.2",
   "description": "Zero-click login for KIT services. Automatically clicks through the login for ILIAS, CAS Campus, and other portals.",
   "browser_specific_settings": {
     "gecko": {
@@ -88,6 +88,11 @@
     {
       "matches": ["https://bwsyncandshare.kit.edu/*"],
       "js": ["scripts/utils.js", "scripts/bwsyncandshare.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://mein-hochschul.sport.kit.edu/*"],
+      "js": ["scripts/utils.js", "scripts/hochschulsport.js"],
       "run_at": "document_idle"
     }
   ]

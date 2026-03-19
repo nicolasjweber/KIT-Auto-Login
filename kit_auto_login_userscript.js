@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        KIT Auto-Login
-// @version     2026.2.10
+// @version     2026.3.2
 // @description Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).
 // @author      nicolasjweber
 // @match       https://idp.scc.kit.edu/*
@@ -19,6 +19,7 @@
 // @match       https://bwidm.scc.kit.edu/*
 // @match       https://hub.bwjupyter.de/*
 // @match       https://bwsyncandshare.kit.edu/*
+// @match       https://mein-hochschul.sport.kit.edu/pages/login
 // @run-at      document-idle
 // @grant       none
 // ==/UserScript==
@@ -353,6 +354,24 @@
         shouldRun('bwsyncandshare').then((allowed) => {
             if (!allowed) return;
             clickIfPresent('a[href*="/apps/user_saml/saml/login"]');
+        });
+    }
+
+    // 13. Hochschulsport
+    if (matchDomain('mein-hochschul.sport.kit.edu')) {
+        shouldRun('hochschulsport').then((allowed) => {
+            if (!allowed) return;
+
+            setInterval(() => {
+                const btn = document.querySelector('.btn-primary:nth-of-type(1)');
+                
+                if (btn && btn.offsetParent !== null && !btn.disabled) {
+                    if (typeof btn.focus === 'function') btn.focus();
+                    btn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+                    btn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+                    btn.click();
+                }
+            }, 500);
         });
     }
 
