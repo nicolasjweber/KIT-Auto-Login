@@ -5,6 +5,7 @@
 // @author      nicolasjweber
 // @match       https://idp.scc.kit.edu/*
 // @match       https://ilias.studium.kit.edu/*
+// @match       https://ilias-medien.bibliothek.kit.edu/*
 // @match       https://koala.kit.edu/*
 // @match       https://campus.studium.kit.edu/*
 // @match       https://lt2srv.iar.kit.edu/*
@@ -130,6 +131,17 @@
                 } else {
                     clickIfPresent('.header-inner a[href*="login.php"]');
                 }
+            }
+        });
+    }
+
+    // 2.5 ILIAS Medienportal
+    if (matchDomain('ilias-medien.bibliothek.kit.edu')) {
+        shouldRun('ilias_medien').then((allowed) => {
+            if (!allowed) return;
+
+            if (href.includes("/login")) {
+                clickIfPresent('a.login-button[href*="/auth"]');
             }
         });
     }
