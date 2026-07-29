@@ -1,6 +1,8 @@
 // This runs ONLY on https://fels.scc.kit.edu/*, https://login.bwidm.de/* and https://bwidm.scc.kit.edu/*
 
-const siteKey = window.location.hostname.includes('bwidm') ? 'bwidm' : 'fels';
+const siteKey = window.location.hostname.includes('bwidm')
+    ? 'bwidm'
+    : 'fels';
 
 shouldRun(siteKey).then(enabled => {
     if (!enabled) return;

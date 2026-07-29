@@ -18,6 +18,7 @@
 // @match       https://fels.scc.kit.edu/*
 // @match       https://login.bwidm.de/*
 // @match       https://bwidm.scc.kit.edu/*
+// @match       https://ki-toolbox.scc.kit.edu/*
 // @match       https://hub.bwjupyter.de/*
 // @match       https://bwsyncandshare.kit.edu/*
 // @match       https://mein-hochschul.sport.kit.edu/*
@@ -350,6 +351,35 @@
                     document.documentElement.appendChild(script);
                     script.remove();
                 }
+            });
+        });
+    }
+
+    // 10.1 KI Toolbox
+    if (matchDomain('ki-toolbox.scc.kit.edu')) {
+        shouldRun('ki_toolbox').then((allowed) => {
+            if (!allowed) return;
+
+            const runWhenPageLoaded = (callback) => {
+                if (document.readyState === 'complete') {
+                    callback();
+                    return;
+                }
+
+                window.addEventListener('load', callback, { once: true });
+            };
+
+            runWhenPageLoaded(() => {
+                setTimeout(() => {
+                    const sidebar = document.querySelector('#sidebar');
+                    if (sidebar && sidebar.getClientRects().length > 0) return;
+
+                    if (href.includes('/auth')) {
+                        waitForElementByText('button', 'Continue with KIT-Account', (button) => {
+                            button.click();
+                        });
+                    }
+                }, 1000);
             });
         });
     }

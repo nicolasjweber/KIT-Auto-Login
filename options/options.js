@@ -10,13 +10,18 @@ const sites = {
   "gitlab": { label: "GitLab", url: "https://gitlab.kit.edu" },
   "hochschulsport": { label: "Hochschulsport", url: "https://mein-hochschul.sport.kit.edu" },
   "signmeup": { label: "SignMeUp", url: "https://signmeup.studium.kit.edu" },
+  "ki_toolbox": { label: "KI Toolbox", url: "https://ki-toolbox.scc.kit.edu/auth" },
   "bewerbung": { label: "Application Portal", url: "https://bewerbung.studium.kit.edu" },
   "ilias_medien": { label: "ILIAS Medienportal", url: "https://ilias-medien.bibliothek.kit.edu" },
   "lecture_translator": { label: "Lecture Translator", url: "https://lecture-translator.kit.edu" },
   "fels": { label: "Federated Login Service", url: "https://fels.scc.kit.edu" },
   "bwidm": { label: "Federated Identity Management", url: "https://login.bwidm.de" },
-  "koala": { label: "KOALA", url: "https://koala.kit.edu" }
+  "koala": { label: "KOALA", url: "https://koala.kit.edu" },
 };
+
+const defaultSortOrder = 'default';
+const sortOrderStorageKey = 'siteSortOrder';
+const defaultSiteOrder = Object.keys(sites);
 
 // Default settings (all enabled)
 const defaultSettings = {};
@@ -24,6 +29,55 @@ Object.keys(sites).forEach(key => defaultSettings[key] = true);
 
 function getStorage() {
   return (typeof browser !== 'undefined' ? browser : chrome).storage;
+}
+
+function compareSitesByLabel(firstEntry, secondEntry) {
+  return firstEntry[1].label.localeCompare(secondEntry[1].label, undefined, { sensitivity: 'base' });
+}
+
+function getSortedSiteEntries(sortOrder) {
+  const entries = Object.entries(sites);
+
+  if (sortOrder === 'asc') {
+    return [...entries].sort(compareSitesByLabel);
+  }
+
+  if (sortOrder === 'desc') {
+    return [...entries].sort(compareSitesByLabel).reverse();
+  }
+
+  return defaultSiteOrder.map((key) => [key, sites[key]]);
+}
+
+function saveSortOrder(sortOrder) {
+  const storage = getStorage();
+  const data = { [sortOrderStorageKey]: sortOrder };
+
+  const result = storage.local.set(data);
+  if (result && typeof result.then === 'function') {
+    return result;
+  }
+
+  return Promise.resolve();
+}
+
+function loadSortOrder() {
+  const storage = getStorage();
+
+  const handleResult = (result) => {
+    return (result && result[sortOrderStorageKey]) ? result[sortOrderStorageKey] : defaultSortOrder;
+  };
+
+  const result = storage.local.get([sortOrderStorageKey]);
+  if (result && typeof result.then === 'function') {
+    return result.then(handleResult);
+  }
+
+  return new Promise((resolve) => {
+    storage.local.get([sortOrderStorageKey], (res) => {
+      resolve(handleResult(res));
+    });
+  });
 }
 
 function saveOptions() {
@@ -68,19 +122,26 @@ function setAllSites(value) {
 function enableAll() { setAllSites(true); }
 function disableAll() { setAllSites(false); }
 
-function restoreOptions() {
+async function restoreOptions() {
   const container = document.getElementById('options-container');
+  const sortSelect = document.getElementById('sort-order');
   const storage = getStorage();
+  const currentSortOrder = await loadSortOrder();
+
+  if (sortSelect) {
+    sortSelect.value = currentSortOrder;
+  }
 
   const render = (result) => {
     const settings = (result && result.siteSettings) ? result.siteSettings : defaultSettings;
+    const sortedSites = getSortedSiteEntries(currentSortOrder);
     
     // Clear container
     while (container.firstChild) {
       container.removeChild(container.firstChild);
     }
 
-    for (const [key, siteInfo] of Object.entries(sites)) {
+    for (const [key, siteInfo] of sortedSites) {
         const div = document.createElement('div');
         div.className = 'option-card';
         
@@ -235,6 +296,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnDisable) btnDisable.addEventListener('click', disableAll);
   const btnGrant = document.getElementById('grant-permissions');
   if (btnGrant) btnGrant.addEventListener('click', requestPermissions);
+
+  const sortSelect = document.getElementById('sort-order');
+  if (sortSelect) {
+    sortSelect.addEventListener('change', () => {
+      saveSortOrder(sortSelect.value).then(() => {
+        restoreOptions();
+      });
+    });
+  }
 });
 
 

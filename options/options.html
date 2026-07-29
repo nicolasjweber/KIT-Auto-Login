@@ -91,6 +91,7 @@
 
     .toolbar {
       display: flex;
+      flex-wrap: nowrap;
       gap: 12px;
       margin-bottom: 20px;
       background: var(--card-bg);
@@ -100,8 +101,38 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
 
+    #sort-order {
+      min-width: 0;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: var(--card-bg);
+      color: var(--text-color);
+      font: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      width: 100%;
+      text-align: center;
+      appearance: none;
+    }
+
+    #sort-order:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+    }
+
+    .toolbar > * {
+      min-width: 0;
+      flex: 6 1 0;
+    }
+
+    .toolbar > button {
+      flex: 7 1 0;
+    }
+
     button {
-      flex: 1;
       justify-content: center;
       background-color: var(--card-bg);
       border: 1px solid var(--border-color);
@@ -116,6 +147,11 @@
       display: flex;
       align-items: center;
       gap: 6px;
+    }
+
+    #sort-order {
+      flex: 6 1 0;
+      width: auto;
     }
 
     button:hover {
@@ -393,6 +429,11 @@
     <div class="toolbar">
       <button id="enable-all">Enable All</button>
       <button id="disable-all">Disable All</button>
+      <select id="sort-order" aria-label="Sort supported sites">
+        <option value="default">Default</option>
+        <option value="asc">A-Z asc.</option>
+        <option value="desc">A-Z desc.</option>
+      </select>
     </div>
 
     <div id="options-container">
