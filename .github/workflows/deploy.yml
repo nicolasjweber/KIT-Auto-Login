@@ -91,13 +91,21 @@ jobs:
           CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
           REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
         run: |
+          if [ -z "$PUBLISHER_ID" ]; then
+            echo "Missing required secret: CHROME_PUBLISHER_ID"
+            exit 1
+          fi
+
           ZIP_FILE=$(ls kit_auto_login-*-chrome.zip)
           chrome-webstore-upload upload \
             --source $ZIP_FILE \
+            --publisher-id $PUBLISHER_ID \
             --extension-id ${{ secrets.CHROME_EXTENSION_ID }}
 
           chrome-webstore-upload publish \
+            --publisher-id $PUBLISHER_ID \
             --extension-id ${{ secrets.CHROME_EXTENSION_ID }}
 
   release:
