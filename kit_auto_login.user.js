@@ -34,7 +34,8 @@
     'use strict';
 
     // This file mirrors the browser extension (scripts/utils.js, scripts/sites.js,
-    // scripts/federated_login_main.js). Keep them in sync when changing site logic.
+    // scripts/federated_login_main.js). Run `node .github/scripts/build-userscript.js`
+    // after changing site definitions or engine logic.
 
     /**
      * Shared helpers and the generic login engine.

@@ -4,6 +4,7 @@ const sites = KIT_SITES;
 const defaultSortOrder = 'default';
 const sortOrderStorageKey = 'siteSortOrder';
 const defaultSiteOrder = Object.keys(sites);
+let lastCurrentTabSiteKey = null;
 
 // Default settings (all enabled)
 const defaultSettings = Object.fromEntries(Object.keys(sites).map((key) => [key, true]));
@@ -43,18 +44,69 @@ function compareSitesByLabel(firstEntry, secondEntry) {
   return firstEntry[1].label.localeCompare(secondEntry[1].label, undefined, { sensitivity: 'base' });
 }
 
-function getSortedSiteEntries(sortOrder) {
+function getSortedSiteEntries(sortOrder, pinnedKey = null) {
   const entries = Object.entries(sites);
+  let sorted;
 
   if (sortOrder === 'asc') {
-    return [...entries].sort(compareSitesByLabel);
+    sorted = [...entries].sort(compareSitesByLabel);
+  } else if (sortOrder === 'desc') {
+    sorted = [...entries].sort(compareSitesByLabel).reverse();
+  } else {
+    sorted = defaultSiteOrder.map((key) => [key, sites[key]]);
   }
 
-  if (sortOrder === 'desc') {
-    return [...entries].sort(compareSitesByLabel).reverse();
+  if (pinnedKey && pinnedKey in sites) {
+    const idx = sorted.findIndex(([key]) => key === pinnedKey);
+    if (idx > 0) {
+      const [pinned] = sorted.splice(idx, 1);
+      sorted.unshift(pinned);
+    }
   }
 
-  return defaultSiteOrder.map((key) => [key, sites[key]]);
+  return sorted;
+}
+
+/**
+ * Returns the siteKey matching the user's currently active tab, or null.
+ * Uses `tabs.query({ active: true, currentWindow: true })` (which populates `tab.url`
+ * for any origin with granted host permission) and falls back to `triggeredTabs`
+ * in session storage.
+ */
+async function getActiveTabSiteKey() {
+  const api = getApi();
+  if (!api.tabs || typeof api.tabs.query !== 'function') return null;
+
+  try {
+    const tabs = await api.tabs.query({ active: true, currentWindow: true });
+    const tab = tabs?.[0];
+    if (!tab) return null;
+
+    if (tab.url) {
+      try {
+        const hostname = new URL(tab.url).hostname;
+        const match = Object.entries(sites).find(([, site]) =>
+          (site.hosts || []).includes(hostname)
+        );
+        if (match) return match[0];
+      } catch (e) {
+        // Ignore invalid URLs
+      }
+    }
+
+    if (typeof tab.id === 'number') {
+      const sessionArea = api.storage.session || api.storage.local;
+      const data = await sessionArea.get(['triggeredTabs']);
+      const triggered = data?.triggeredTabs?.[tab.id];
+      if (triggered?.siteKey && triggered.siteKey in sites) {
+        return triggered.siteKey;
+      }
+    }
+  } catch (e) {
+    // Ignore tab query errors
+  }
+
+  return null;
 }
 
 async function saveSortOrder(sortOrder) {
@@ -169,14 +221,19 @@ async function restoreOptions() {
     sortSelect.value = currentSortOrder;
   }
 
-  const { siteSettings = defaultSettings } = await readSettings(['siteSettings']);
-  const sortedSites = getSortedSiteEntries(currentSortOrder);
+  const [{ siteSettings = defaultSettings }, currentTabSiteKey] = await Promise.all([
+    readSettings(['siteSettings']),
+    getActiveTabSiteKey(),
+  ]);
+  lastCurrentTabSiteKey = currentTabSiteKey;
+  const sortedSites = getSortedSiteEntries(currentSortOrder, currentTabSiteKey);
 
   container.replaceChildren();
 
   for (const [key, siteInfo] of sortedSites) {
+    const isCurrentTabSite = key === currentTabSiteKey;
     const div = document.createElement('div');
-    div.className = 'option-card';
+    div.className = isCurrentTabSite ? 'option-card current-site' : 'option-card';
     div.dataset.siteKey = key;
 
     // Label
@@ -277,4 +334,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   api.permissions.onAdded.addListener(() => refreshSitePermissionsUI());
   api.permissions.onRemoved.addListener(() => refreshSitePermissionsUI());
+
+  if (api.tabs) {
+    const syncActiveTabHighlight = async () => {
+      const activeKey = await getActiveTabSiteKey();
+      if (activeKey !== lastCurrentTabSiteKey) {
+        await restoreOptions();
+      }
+    };
+    api.tabs.onActivated?.addListener(syncActiveTabHighlight);
+    api.tabs.onUpdated?.addListener((tabId, changeInfo) => {
+      if (changeInfo.url || changeInfo.status === 'complete') {
+        syncActiveTabHighlight();
+      }
+    });
+  }
 });
