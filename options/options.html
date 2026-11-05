@@ -217,6 +217,35 @@
       background-color: rgba(211, 47, 47, 0.05);
     }
 
+    #pause-toggle {
+      flex: 0 0 38px;
+      padding: 10px 0;
+      color: var(--text-color);
+    }
+
+    #pause-toggle svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    #pause-toggle:hover {
+      color: var(--warn-text);
+      border-color: var(--warn-border);
+      background-color: var(--warn-bg);
+    }
+
+    #pause-toggle.active {
+      background-color: var(--warn-bg);
+      border-color: var(--warn-border);
+      color: var(--warn-text);
+    }
+
+    body.is-paused #options-container {
+      opacity: 0.55;
+      transition: opacity 0.2s ease;
+    }
+
     /* Toggle Switch Style */
     .option-card {
       background: var(--card-bg);
@@ -493,6 +522,15 @@
 
     <div class="toolbar">
       <button id="enable-all">Enable All</button>
+      <button id="pause-toggle" type="button" title="Pause auto-login for 5 minutes" aria-label="Pause auto-login for 5 minutes">
+        <svg id="pause-icon-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <rect x="6" y="4" width="4" height="16" rx="1"/>
+          <rect x="14" y="4" width="4" height="16" rx="1"/>
+        </svg>
+        <svg id="pause-icon-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display:none">
+          <path d="M6 4.75a.75.75 0 0 1 1.14-.64l11.5 7.25a.75.75 0 0 1 0 1.28l-11.5 7.25A.75.75 0 0 1 6 19.25V4.75Z"/>
+        </svg>
+      </button>
       <button id="disable-all">Disable All</button>
       <div class="sort-wrapper" title="Sort supported sites">
         <svg class="sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

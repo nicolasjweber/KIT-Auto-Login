@@ -204,6 +204,7 @@ function runSteps(site, siteKey) {
 
     function check() {
         if (stopped) return;
+        if (typeof isAutoLoginPaused === 'function' && isAutoLoginPaused()) return;
 
         if (window.location.href !== currentUrl) {
             // SPA navigation: allow all steps again on the new route
@@ -271,6 +272,27 @@ function startSite(site, siteKey) {
 
 // --- Settings ---------------------------------------------------------------
 
+let kalPausedUntil = 0;
+
+function isAutoLoginPaused() {
+    return kalPausedUntil > Date.now();
+}
+
+(function initPauseListener() {
+    try {
+        const api = typeof browser !== 'undefined' ? browser : (typeof chrome !== 'undefined' ? chrome : null);
+        if (api?.storage?.onChanged) {
+            api.storage.onChanged.addListener((changes) => {
+                if (changes.pausedUntil) {
+                    kalPausedUntil = Number(changes.pausedUntil.newValue) || 0;
+                }
+            });
+        }
+    } catch (e) {
+        // Ignore in contexts without extension storage
+    }
+})();
+
 /**
  * Reads keys from `storage.sync`, automatically falling back to `storage.local`
  * if `sync` is empty (and migrating existing local settings to `sync`).
@@ -298,13 +320,20 @@ async function getSettingsFromStorage(keys) {
 }
 
 /**
- * Checks if the addon is enabled for the given site key.
+ * Checks if the addon is enabled for the given site key and not temporarily paused.
  * @param {string} siteKey - The key identifying the site (e.g. 'ilias', 'campus').
  * @returns {Promise<boolean>} - Resolves to true if enabled, false otherwise.
  */
 async function shouldRun(siteKey) {
     try {
-        const { siteSettings = {} } = await getSettingsFromStorage(['siteSettings']);
+        const { siteSettings = {}, pausedUntil = 0 } = await getSettingsFromStorage([
+            'siteSettings',
+            'pausedUntil',
+        ]);
+        kalPausedUntil = Number(pausedUntil) || 0;
+        if (isAutoLoginPaused()) {
+            return false;
+        }
         return siteKey in siteSettings ? !!siteSettings[siteKey] : true;
     } catch (e) {
         console.error(e);

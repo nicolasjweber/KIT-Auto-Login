@@ -18,27 +18,35 @@ const TAB_TRIGGERED_STORAGE_KEY = 'triggeredTabs';
 
 const BADGE_COLOR_SUCCESS = '#009682'; // KIT Green
 const BADGE_COLOR_WARNING = '#f59e0b'; // Amber warning
+const BADGE_COLOR_PAUSED = '#6b7280';  // Neutral slate for pause
+
+let pauseExpiryTimer = null;
 
 // --- Storage helpers (sync with local fallback + session for tab state) ------
 
-async function getSiteSettings() {
+async function getStoredConfig() {
     const syncArea = api.storage.sync || api.storage.local;
     const localArea = api.storage.local;
-    const keys = ['siteSettings', 'siteSortOrder'];
+    const keys = ['siteSettings', 'siteSortOrder', 'pausedUntil'];
 
     const syncData = (await syncArea.get(keys)) || {};
-    if (syncData.siteSettings || syncData.siteSortOrder) {
-        return syncData.siteSettings || {};
+    if (syncData.siteSettings || syncData.siteSortOrder || syncData.pausedUntil) {
+        return syncData;
     }
 
     if (localArea && localArea !== syncArea) {
         const localData = (await localArea.get(keys)) || {};
-        if (localData.siteSettings || localData.siteSortOrder) {
+        if (localData.siteSettings || localData.siteSortOrder || localData.pausedUntil) {
             await syncArea.set(localData);
-            return localData.siteSettings || {};
+            return localData;
         }
     }
     return {};
+}
+
+async function getSiteSettings() {
+    const config = await getStoredConfig();
+    return config.siteSettings || {};
 }
 
 function getSessionArea() {
@@ -123,6 +131,23 @@ async function setTabBadge(tabId, text, color, title) {
 
 async function updateGlobalPermissionBadge() {
     try {
+        clearTimeout(pauseExpiryTimer);
+        const { pausedUntil = 0 } = await getStoredConfig();
+        const remainingMs = Number(pausedUntil) - Date.now();
+
+        if (remainingMs > 0) {
+            await api.action.setBadgeText({ text: 'II' });
+            await api.action.setBadgeBackgroundColor({ color: BADGE_COLOR_PAUSED });
+            if (typeof api.action.setBadgeTextColor === 'function') {
+                await api.action.setBadgeTextColor({ color: '#ffffff' });
+            }
+            await api.action.setTitle({
+                title: 'KIT Auto-Login: Temporarily paused',
+            });
+            pauseExpiryTimer = setTimeout(() => updateGlobalPermissionBadge(), remainingMs + 250);
+            return;
+        }
+
         const missingSite = await findMissingEnabledSite();
         if (missingSite) {
             await api.action.setBadgeText({ text: '!' });

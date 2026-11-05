@@ -243,6 +243,7 @@
 
         function check() {
             if (stopped) return;
+            if (typeof isAutoLoginPaused === 'function' && isAutoLoginPaused()) return;
 
             if (window.location.href !== currentUrl) {
                 // SPA navigation: allow all steps again on the new route

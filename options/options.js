@@ -3,8 +3,12 @@ const sites = KIT_SITES;
 
 const defaultSortOrder = 'default';
 const sortOrderStorageKey = 'siteSortOrder';
+const pausedUntilStorageKey = 'pausedUntil';
+const PAUSE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 const defaultSiteOrder = Object.keys(sites);
 let lastCurrentTabSiteKey = null;
+let currentPausedUntil = 0;
+let pauseTickInterval = null;
 
 // Default settings (all enabled)
 const defaultSettings = Object.fromEntries(Object.keys(sites).map((key) => [key, true]));
@@ -118,6 +122,66 @@ async function loadSortOrder() {
   return res[sortOrderStorageKey] || defaultSortOrder;
 }
 
+function formatRemainingTime(ms) {
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${min}:${String(sec).padStart(2, '0')}`;
+}
+
+function renderPauseState() {
+  const btn = document.getElementById('pause-toggle');
+  const iconPause = document.getElementById('pause-icon-pause');
+  const iconPlay = document.getElementById('pause-icon-play');
+  if (!btn) return;
+
+  const remainingMs = currentPausedUntil - Date.now();
+  const isPaused = remainingMs > 0;
+
+  btn.classList.toggle('active', isPaused);
+  document.body.classList.toggle('is-paused', isPaused);
+
+  if (iconPause) iconPause.style.display = isPaused ? 'none' : '';
+  if (iconPlay) iconPlay.style.display = isPaused ? '' : 'none';
+
+  if (isPaused) {
+    const label = `Paused (${formatRemainingTime(remainingMs)} left) - Click to resume`;
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+  } else {
+    const label = 'Pause auto-login for 5 minutes';
+    btn.title = label;
+    btn.setAttribute('aria-label', label);
+    if (pauseTickInterval) {
+      clearInterval(pauseTickInterval);
+      pauseTickInterval = null;
+    }
+  }
+}
+
+function syncPauseCountdown() {
+  clearInterval(pauseTickInterval);
+  pauseTickInterval = null;
+  renderPauseState();
+  if (currentPausedUntil > Date.now()) {
+    pauseTickInterval = setInterval(renderPauseState, 1000);
+  }
+}
+
+async function loadPauseState() {
+  const res = await readSettings([pausedUntilStorageKey]);
+  currentPausedUntil = Number(res[pausedUntilStorageKey]) || 0;
+  syncPauseCountdown();
+}
+
+async function togglePause() {
+  const wasPaused = currentPausedUntil > Date.now();
+  currentPausedUntil = wasPaused ? 0 : Date.now() + PAUSE_DURATION_MS;
+  await getSyncStorage().set({ [pausedUntilStorageKey]: currentPausedUntil });
+  syncPauseCountdown();
+  showStatus(wasPaused ? 'Auto-login resumed' : 'Paused for 5 minutes');
+}
+
 async function saveOptions() {
   const settings = {};
   for (const key of Object.keys(sites)) {
@@ -132,8 +196,9 @@ async function saveOptions() {
   await refreshSitePermissionsUI();
 }
 
-function showStatus() {
+function showStatus(message = 'Settings saved') {
   const status = document.getElementById('status');
+  status.textContent = message;
   status.classList.add('show');
   setTimeout(() => {
     status.classList.remove('show');
@@ -312,6 +377,7 @@ function syncWithBrowserTheme() {
 document.addEventListener('DOMContentLoaded', () => {
   syncWithBrowserTheme();
   restoreOptions();
+  loadPauseState();
 
   const api = getApi();
   const manifest = api.runtime.getManifest();
@@ -320,6 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('enable-all')?.addEventListener('click', enableAll);
   document.getElementById('disable-all')?.addEventListener('click', disableAll);
+  document.getElementById('pause-toggle')?.addEventListener('click', togglePause);
   document.getElementById('grant-all-permissions')?.addEventListener('click', () => {
     requestOriginsPermission(getAllOrigins());
   });
