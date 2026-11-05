@@ -43,9 +43,11 @@ This extension automates the clicking of login buttons, but it **does not store 
 
 ## Screenshot & Supported Sites
 
-<p>
-  <img src="assets/screenshot_light.png" alt="Screenshot of the KIT Auto-Login options page showing supported sites" width="350" />
-  <img src="assets/screenshot_dark.png" alt="Screenshot of the KIT Auto-Login options page showing supported sites" width="350" />
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshot_readme_dark.png" />
+    <img src="assets/screenshot_readme_light.png" alt="Screenshot of the KIT Auto-Login options page showing all supported sites" width="560" />
+  </picture>
 </p>
 
 Tip: Click on any site in the list to quickly jump to the respective KIT portal.

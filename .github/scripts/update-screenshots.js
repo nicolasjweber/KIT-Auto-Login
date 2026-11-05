@@ -434,6 +434,83 @@ function buildMarqueePromoHtml(isDark, lightPopupFileUrl, darkPopupFileUrl) {
 </html>`;
 }
 
+function buildReadmeShowcaseHtml(isDark, lightPopupFileUrl, darkPopupFileUrl, cssHeight) {
+    const bgColor = isDark ? '#16181a' : '#f1f3f5';
+    const primaryPopupUrl = isDark ? darkPopupFileUrl : lightPopupFileUrl;
+    const secondaryPopupUrl = isDark ? lightPopupFileUrl : darkPopupFileUrl;
+    const primaryHeight = Math.ceil(cssHeight * 0.88);
+    const secondaryHeight = Math.ceil(cssHeight * 0.78);
+    const canvasWidth = 680;
+    const canvasHeight = primaryHeight + 88;
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: ${canvasWidth}px;
+    height: ${canvasHeight}px;
+    overflow: hidden;
+    background: ${bgColor};
+  }
+  .canvas {
+    position: relative;
+    width: ${canvasWidth}px;
+    height: ${canvasHeight}px;
+  }
+  .popup-frame {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)'};
+    box-shadow: 0 18px 44px rgba(0, 0, 0, ${isDark ? '0.5' : '0.12'});
+    position: absolute;
+  }
+  .popup-frame.primary {
+    left: 48px;
+    top: 44px;
+    width: 440px;
+    height: ${primaryHeight}px;
+    z-index: 2;
+    background: ${isDark ? '#121212' : '#f8f9fa'};
+  }
+  .popup-frame.secondary {
+    right: 48px;
+    top: 84px;
+    width: 390px;
+    height: ${secondaryHeight}px;
+    z-index: 1;
+    opacity: 0.92;
+    background: ${isDark ? '#f8f9fa' : '#121212'};
+  }
+  iframe {
+    width: 500px;
+    height: ${cssHeight + 10}px;
+    border: none;
+    transform: scale(0.88);
+    transform-origin: top left;
+    pointer-events: none;
+  }
+  .popup-frame.secondary iframe {
+    height: ${cssHeight + 20}px;
+    transform: scale(0.78);
+  }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="popup-frame primary">
+      <iframe src="${primaryPopupUrl}"></iframe>
+    </div>
+    <div class="popup-frame secondary">
+      <iframe src="${secondaryPopupUrl}"></iframe>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
 function runChrome(chromeBin, args) {
     execFileSync(chromeBin, args, { stdio: 'ignore' });
 }
@@ -590,6 +667,39 @@ function main() {
             ]);
 
             console.log(`Updated assets/${tile.name} (${tile.width}x${tile.height}px)`);
+        }
+
+        // 4. Full-length dual-popup showcase for GitHub README
+        const readmeWidth = 680;
+        const readmeHeight = Math.ceil(cssHeight * 0.88) + 88;
+        for (const mode of ['light', 'dark']) {
+            const isDark = mode === 'dark';
+            const readmeHtmlPath = path.join(tmpDir, `readme_showcase_${mode}.html`);
+            const readmeFileUrl = 'file:///' + readmeHtmlPath.replace(/\\/g, '/');
+            const outPath = path.join(repoRoot, 'assets', `screenshot_readme_${mode}.png`);
+
+            fs.writeFileSync(
+                readmeHtmlPath,
+                buildReadmeShowcaseHtml(isDark, lightPopupFileUrl, darkPopupFileUrl, cssHeight),
+                'utf8'
+            );
+
+            runChrome(chromeBin, [
+                '--headless=new',
+                '--no-sandbox',
+                '--disable-gpu',
+                '--no-first-run',
+                '--hide-scrollbars',
+                `--user-data-dir=${profileDir}`,
+                '--allow-file-access-from-files',
+                '--force-device-scale-factor=2',
+                `--window-size=${readmeWidth},${readmeHeight}`,
+                '--virtual-time-budget=1500',
+                `--screenshot=${outPath}`,
+                readmeFileUrl,
+            ]);
+
+            console.log(`Updated assets/screenshot_readme_${mode}.png (${readmeWidth * 2}x${readmeHeight * 2}px)`);
         }
     } finally {
         fs.rmSync(tmpDir, { recursive: true, force: true });
