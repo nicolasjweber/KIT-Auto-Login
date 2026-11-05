@@ -91,6 +91,23 @@ function waitForElement(selector, callback, timeoutMs = KAL_DEFAULT_TIMEOUT_MS) 
     observer.observe(document.documentElement, { childList: true, subtree: true });
 }
 
+/**
+ * Notifies the background script that an auto-login action was performed on this tab
+ * so it can update the toolbar badge. Safe to call in environments without runtime messaging
+ * (e.g. the userscript).
+ */
+function notifyAutoLogin(siteKey) {
+    try {
+        const api = typeof browser !== 'undefined' ? browser : (typeof chrome !== 'undefined' ? chrome : null);
+        if (api && api.runtime && typeof api.runtime.sendMessage === 'function') {
+            const p = api.runtime.sendMessage({ type: 'kit-auto-login:triggered', siteKey });
+            if (p && typeof p.catch === 'function') p.catch(() => {});
+        }
+    } catch (e) {
+        // Ignore in contexts without an extension runtime
+    }
+}
+
 // --- Generic step engine -----------------------------------------------------
 
 /**
@@ -158,7 +175,7 @@ function performClick(el, step) {
  * - In `watch` mode (SPAs) the engine keeps observing and resets when the URL
  *   changes; otherwise it gives up after `timeout` ms.
  */
-function runSteps(site) {
+function runSteps(site, siteKey) {
     const steps = (site.steps || []).map(normalizeStep);
     const timeoutMs = site.watch ? Infinity : (site.timeout || KAL_DEFAULT_TIMEOUT_MS);
 
@@ -214,6 +231,7 @@ function runSteps(site) {
             if (el) {
                 clicked.add(i);
                 lastClickAt = Date.now();
+                notifyAutoLogin(siteKey);
                 performClick(el, step);
                 break;
             }
@@ -233,13 +251,13 @@ function runSteps(site) {
 }
 
 /** Starts a site definition, honouring `waitForLoad` and `delay`. */
-function startSite(site) {
+function startSite(site, siteKey) {
     const begin = () => {
         setTimeout(() => {
             if (typeof site.run === 'function') {
-                site.run(site);
+                site.run(site, siteKey);
             } else {
-                runSteps(site);
+                runSteps(site, siteKey);
             }
         }, site.delay || 0);
     };
@@ -254,47 +272,67 @@ function startSite(site) {
 // --- Settings ---------------------------------------------------------------
 
 /**
+ * Reads keys from `storage.sync`, automatically falling back to `storage.local`
+ * if `sync` is empty (and migrating existing local settings to `sync`).
+ */
+async function getSettingsFromStorage(keys) {
+    const api = typeof browser !== 'undefined' ? browser : (typeof chrome !== 'undefined' ? chrome : null);
+    const storageObj = api && api.storage;
+    if (!storageObj) return {};
+
+    const primary = storageObj.sync || storageObj.local;
+    const fallback = storageObj.local;
+    if (!primary) return {};
+
+    const readArea = (area, k) => new Promise((resolve) => {
+        try {
+            const res = area.get(k);
+            if (res && typeof res.then === 'function') {
+                res.then(resolve).catch(() => resolve({}));
+            } else {
+                area.get(k, (data) => resolve(data || {}));
+            }
+        } catch (e) {
+            resolve({});
+        }
+    });
+
+    const syncData = await readArea(primary, keys);
+    const hasAnyKey = keys.some((k) => syncData && Object.prototype.hasOwnProperty.call(syncData, k));
+    if (hasAnyKey || !fallback || fallback === primary) {
+        return syncData || {};
+    }
+
+    // One-time migration from storage.local -> storage.sync
+    const localData = await readArea(fallback, keys);
+    const hasLocalKey = keys.some((k) => localData && Object.prototype.hasOwnProperty.call(localData, k));
+    if (hasLocalKey) {
+        try {
+            primary.set(localData);
+        } catch (e) {
+            // Ignore write errors during migration
+        }
+        return localData;
+    }
+
+    return {};
+}
+
+/**
  * Checks if the addon is enabled for the given site key.
  * @param {string} siteKey - The key identifying the site (e.g. 'ilias', 'campus').
  * @returns {Promise<boolean>} - Resolves to true if enabled, false otherwise.
  */
-function shouldRun(siteKey) {
-    return new Promise((resolve) => {
-        // Fallback for context where chrome/browser might check failed
-        const storageObj = (typeof browser !== 'undefined' ? browser : chrome).storage;
-        
-        if (!storageObj || !storageObj.local) {
-             // If permission is missing or API unavailable, run by default
-             resolve(true);
-             return;
+async function shouldRun(siteKey) {
+    try {
+        const result = await getSettingsFromStorage(['siteSettings']);
+        const settings = (result && result.siteSettings) ? result.siteSettings : {};
+        if (Object.prototype.hasOwnProperty.call(settings, siteKey)) {
+            return !!settings[siteKey];
         }
-
-        const handleResult = (result) => {
-            if (chrome.runtime.lastError) {
-                // If checking fails, default to enabled
-                console.warn('KIT Auto-Login: Error reading settings', chrome.runtime.lastError);
-                resolve(true);
-                return;
-            }
-            const settings = (result && result.siteSettings) ? result.siteSettings : {};
-            // Default to true if not present in settings
-            if (settings.hasOwnProperty(siteKey)) {
-                resolve(settings[siteKey]);
-            } else {
-                resolve(true); 
-            }
-        };
-
-        try {
-            const result = storageObj.local.get('siteSettings');
-            if (result && typeof result.then === 'function') {
-                result.then(handleResult).catch(err => resolve(true));
-            } else {
-                storageObj.local.get('siteSettings', handleResult);
-            }
-        } catch (e) {
-            console.error(e);
-            resolve(true);
-        }
-    });
+        return true;
+    } catch (e) {
+        console.error(e);
+        return true;
+    }
 }

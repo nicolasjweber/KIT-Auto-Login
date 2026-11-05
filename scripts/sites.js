@@ -203,7 +203,7 @@ function getRecentIdpAttempts() {
  * Gives up after IDP_MAX_ATTEMPTS automatic submits within a short window
  * (per tab), so outdated stored credentials cannot cause an account lockout.
  */
-function runIdpLogin() {
+function runIdpLogin(site, siteKey = "idp") {
     const attempts = getRecentIdpAttempts();
     if (attempts.length >= IDP_MAX_ATTEMPTS) {
         console.warn("KIT Auto-Login: Automatic login failed repeatedly, please log in manually.");
@@ -223,6 +223,7 @@ function runIdpLogin() {
         } catch (e) {
             // Storage unavailable; still submit
         }
+        notifyAutoLogin(siteKey);
         submit.click();
     });
 }
@@ -231,7 +232,8 @@ function runIdpLogin() {
  * FeLS / bwIDM need access to the page's PrimeFaces object, so the actual work
  * happens in federated_login_main.js (MAIN world). This only signals it to start.
  */
-function startFederatedLogin() {
+function startFederatedLogin(site, siteKey = "fels") {
+    notifyAutoLogin(siteKey);
     document.documentElement.dataset.kitAutoLogin = "federated";
     document.dispatchEvent(new CustomEvent("kit-auto-login:federated"));
 }

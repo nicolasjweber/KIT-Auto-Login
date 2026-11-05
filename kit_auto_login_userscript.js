@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        KIT Auto-Login
-// @version     2026.7.3
+// @version     2026.11.1
 // @description Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).
 // @author      nicolasjweber
 // @match       https://idp.scc.kit.edu/*
@@ -126,6 +126,23 @@
         observer.observe(document.documentElement, { childList: true, subtree: true });
     }
 
+    /**
+     * Notifies the background script that an auto-login action was performed on this tab
+     * so it can update the toolbar badge. Safe to call in environments without runtime messaging
+     * (e.g. the userscript).
+     */
+    function notifyAutoLogin(siteKey) {
+        try {
+            const api = typeof browser !== 'undefined' ? browser : (typeof chrome !== 'undefined' ? chrome : null);
+            if (api && api.runtime && typeof api.runtime.sendMessage === 'function') {
+                const p = api.runtime.sendMessage({ type: 'kit-auto-login:triggered', siteKey });
+                if (p && typeof p.catch === 'function') p.catch(() => {});
+            }
+        } catch (e) {
+            // Ignore in contexts without an extension runtime
+        }
+    }
+
     // --- Generic step engine -----------------------------------------------------
 
     /**
@@ -193,7 +210,7 @@
      * - In `watch` mode (SPAs) the engine keeps observing and resets when the URL
      *   changes; otherwise it gives up after `timeout` ms.
      */
-    function runSteps(site) {
+    function runSteps(site, siteKey) {
         const steps = (site.steps || []).map(normalizeStep);
         const timeoutMs = site.watch ? Infinity : (site.timeout || KAL_DEFAULT_TIMEOUT_MS);
 
@@ -249,6 +266,7 @@
                 if (el) {
                     clicked.add(i);
                     lastClickAt = Date.now();
+                    notifyAutoLogin(siteKey);
                     performClick(el, step);
                     break;
                 }
@@ -268,13 +286,13 @@
     }
 
     /** Starts a site definition, honouring `waitForLoad` and `delay`. */
-    function startSite(site) {
+    function startSite(site, siteKey) {
         const begin = () => {
             setTimeout(() => {
                 if (typeof site.run === 'function') {
-                    site.run(site);
+                    site.run(site, siteKey);
                 } else {
-                    runSteps(site);
+                    runSteps(site, siteKey);
                 }
             }, site.delay || 0);
         };
@@ -491,7 +509,7 @@
      * Gives up after IDP_MAX_ATTEMPTS automatic submits within a short window
      * (per tab), so outdated stored credentials cannot cause an account lockout.
      */
-    function runIdpLogin() {
+    function runIdpLogin(site, siteKey = "idp") {
         const attempts = getRecentIdpAttempts();
         if (attempts.length >= IDP_MAX_ATTEMPTS) {
             console.warn("KIT Auto-Login: Automatic login failed repeatedly, please log in manually.");
@@ -511,6 +529,7 @@
             } catch (e) {
                 // Storage unavailable; still submit
             }
+            notifyAutoLogin(siteKey);
             submit.click();
         });
     }
@@ -519,7 +538,8 @@
      * FeLS / bwIDM need access to the page's PrimeFaces object, so the actual work
      * happens in federated_login_main.js (MAIN world). This only signals it to start.
      */
-    function startFederatedLogin() {
+    function startFederatedLogin(site, siteKey = "fels") {
+        notifyAutoLogin(siteKey);
         document.documentElement.dataset.kitAutoLogin = "federated";
         document.dispatchEvent(new CustomEvent("kit-auto-login:federated"));
     }

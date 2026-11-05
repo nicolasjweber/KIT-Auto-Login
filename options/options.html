@@ -9,6 +9,7 @@
       --bg-color: #f8f9fa;
       --card-bg: #ffffff;
       --text-color: #333333;
+      --muted-text: #6b7280;
       --border-color: #e0e0e0;
       --button-hover-bg: #f8f9fa;
       --button-hover-border: #bbb;
@@ -18,12 +19,17 @@
       --version-bg: var(--card-bg);
       --version-color: var(--text-color);
       --version-border: var(--border-color);
+      --warn-bg: #fff3cd;
+      --warn-border: #ffc107;
+      --warn-text: #664d03;
+      --warn-subtext: #997404;
     }
 
     body.dark-mode {
       --bg-color: #121212;
       --card-bg: #1e1e1e;
       --text-color: #e0e0e0;
+      --muted-text: #9ca3af;
       --border-color: #333333;
       --button-hover-bg: #2a2a2a;
       --button-hover-border: #555;
@@ -33,6 +39,10 @@
       --version-bg: var(--card-bg);
       --version-color: var(--text-color);
       --version-border: var(--border-color);
+      --warn-bg: #3a2e00;
+      --warn-border: #665200;
+      --warn-text: #ffda6a;
+      --warn-subtext: #cc9a06;
     }
 
     * {
@@ -195,6 +205,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
       transition: all 0.2s ease;
       box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
@@ -209,6 +220,20 @@
       border-color: var(--button-hover-border);
     }
 
+    .option-card.missing-permission {
+      border-color: var(--warn-border);
+      opacity: 0.72;
+    }
+
+    .option-card.missing-permission .option-label {
+      color: var(--muted-text);
+    }
+
+    .option-card.missing-permission .site-icon {
+      filter: grayscale(85%);
+      opacity: 0.75;
+    }
+
     .option-label {
       font-size: 1.05rem;
       font-weight: 500;
@@ -220,7 +245,32 @@
       align-items: center;
       gap: 14px;
       transition: color 0.2s ease;
-      padding-right: 16px; /* Add padding to prevent text from touching the switch */
+      min-width: 0;
+    }
+
+    .option-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .site-perm-btn {
+      background-color: var(--warn-bg);
+      border: 1px solid var(--warn-border);
+      color: var(--warn-text);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .site-perm-btn:hover {
+      background-color: #ffc107;
+      border-color: #e0a800;
+      color: #1a1a1a;
     }
 
     .site-icon {
@@ -232,6 +282,7 @@
       padding: 2px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       transition: transform 0.2s ease;
+      flex-shrink: 0;
     }
 
     .option-label:hover {
@@ -239,7 +290,7 @@
     }
 
     .option-label:hover .site-icon {
-        transform: scale(1.1);
+      transform: scale(1.1);
     }
 
     /* Switch CSS */
@@ -341,70 +392,53 @@
       text-decoration: underline;
     }
 
-    /* Permissions banner */
-    #permissions-banner {
-      background-color: #fff3cd;
-      border: 1px solid #ffc107;
-      border-radius: 10px;
-      padding: 16px 20px;
+    /* Onboarding card (only shown on first install when permissions are missing) */
+    #onboarding-card {
+      background-color: var(--card-bg);
+      border: 2px solid var(--primary-color);
+      border-radius: 12px;
+      padding: 18px 20px;
       margin-bottom: 20px;
       display: none;
       align-items: center;
-      gap: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 4px 12px rgba(0, 150, 130, 0.12);
     }
 
-    body.dark-mode #permissions-banner {
-      background-color: #3a2e00;
-      border-color: #665200;
-    }
-
-    #permissions-banner .banner-icon {
-      font-size: 1.4rem;
-      flex-shrink: 0;
-    }
-
-    #permissions-banner .banner-content {
+    #onboarding-card .onboarding-content {
       flex: 1;
     }
 
-    #permissions-banner .banner-content p {
-      margin: 0 0 4px 0;
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: #664d03;
+    #onboarding-card h2 {
+      margin: 0 0 6px 0;
+      font-size: 1.05rem;
+      color: var(--primary-color);
     }
 
-    body.dark-mode #permissions-banner .banner-content p {
-      color: #ffda6a;
+    #onboarding-card p {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--muted-text);
+      line-height: 1.4;
     }
 
-    #permissions-banner .banner-content small {
-      font-size: 0.82rem;
-      color: #997404;
-    }
-
-    body.dark-mode #permissions-banner .banner-content small {
-      color: #cc9a06;
-    }
-
-    #grant-permissions {
+    #grant-all-permissions {
       flex: 0 0 auto;
-      background-color: #ffc107;
-      border: 1px solid #e0a800;
-      color: #1a1a1a;
-      padding: 8px 16px;
-      border-radius: 6px;
+      background-color: var(--primary-color);
+      border: 1px solid var(--primary-color);
+      color: #ffffff;
+      padding: 10px 18px;
+      border-radius: 8px;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.92rem;
       font-weight: 600;
       white-space: nowrap;
-      transition: all 0.2s ease;
     }
 
-    #grant-permissions:hover {
-      background-color: #e0a800;
-      border-color: #c69500;
+    #grant-all-permissions:hover {
+      background-color: var(--link-hover-color);
+      border-color: var(--link-hover-color);
     }
   </style>
 </head>
@@ -416,14 +450,13 @@
         <small id="version"></small>
       </h1>
     </header>
-    
-    <div id="permissions-banner">
-      <span class="banner-icon">⚠️</span>
-      <div class="banner-content">
-        <p>Site permissions required</p>
-        <small>Grant access so auto-login can work.</small>
+
+    <div id="onboarding-card">
+      <div class="onboarding-content">
+        <h2 id="onboarding-title">Welcome to KIT Auto-Login!</h2>
+        <p id="onboarding-text">Grant site access in one click so the extension can automatically click through KIT login pages.</p>
       </div>
-      <button id="grant-permissions">Grant</button>
+      <button id="grant-all-permissions">Grant All Permissions</button>
     </div>
 
     <div class="toolbar">
