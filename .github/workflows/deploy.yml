@@ -139,5 +139,5 @@ jobs:
         with:
           files: |
             artifacts/*
-            kit_auto_login_userscript.js
+            kit_auto_login.user.js
           body_path: RELEASE_NOTES.md

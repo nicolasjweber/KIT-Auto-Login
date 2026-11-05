@@ -3,6 +3,9 @@
 // @version     2026.11.1
 // @description Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).
 // @author      nicolasjweber
+// @homepageURL https://github.com/nicolasjweber/KIT-Auto-Login
+// @downloadURL https://raw.githubusercontent.com/nicolasjweber/KIT-Auto-Login/main/kit_auto_login.user.js
+// @updateURL   https://raw.githubusercontent.com/nicolasjweber/KIT-Auto-Login/main/kit_auto_login.user.js
 // @match       https://idp.scc.kit.edu/*
 // @match       https://ilias.studium.kit.edu/*
 // @match       https://koala.kit.edu/*
@@ -546,9 +549,28 @@
 
     // --- Userscript overrides ---------------------------------------------------
 
-    // Safari: log in with a passkey instead of waiting for password autofill
-    KIT_SITES.idp.run = undefined;
-    KIT_SITES.idp.steps = ['button#passkeys_login'];
+    // Safari / Userscript IdP login: support both Passkey login (button#passkeys_login)
+    // and password autofill (#password -> #sbmt) so whichever method the user uses
+    // completes automatically.
+    function runUserscriptIdpLogin(site, siteKey = 'idp') {
+        const attempts = getRecentIdpAttempts();
+        if (attempts.length >= IDP_MAX_ATTEMPTS) {
+            console.warn('KIT Auto-Login: Automatic login failed repeatedly, please log in manually.');
+            return;
+        }
+
+        // 1. Trigger Passkey login if the button is present (or appears)
+        waitForElement('button#passkeys_login', (passkeyBtn) => {
+            if (!isDisabled(passkeyBtn)) {
+                passkeyBtn.click();
+            }
+        });
+
+        // 2. Also watch for password autofill (if the user cancels passkeys or uses a password manager)
+        runIdpLogin(site, siteKey);
+    }
+
+    KIT_SITES.idp.run = runUserscriptIdpLogin;
 
     // Userscripts run isolated from the page, so inject the PrimeFaces logic
     // (same code as scripts/federated_login_main.js in the extension)
@@ -667,12 +689,12 @@
         }
     }
 
-    function injectFederatedLogin() {
+    function injectFederatedLogin(site, siteKey) {
         const script = document.createElement('script');
         script.textContent = '(' + federatedLoginMain.toString() + ')();';
         document.documentElement.appendChild(script);
         script.remove();
-        startFederatedLogin();
+        startFederatedLogin(site, siteKey);
     }
 
     KIT_SITES.fels.run = injectFederatedLogin;
@@ -680,7 +702,7 @@
 
     // --- Entry point -------------------------------------------------------------
 
-    const site = Object.values(KIT_SITES).find((s) => s.hosts.includes(window.location.hostname));
-    if (site) startSite(site);
+    const entry = Object.entries(KIT_SITES).find(([, s]) => s.hosts.includes(window.location.hostname));
+    if (entry) startSite(entry[1], entry[0]);
 
 })();
