@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name        KIT Auto-Login
-// @version     2026.3.3
+// @version     2026.7.3
 // @description Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).
 // @author      nicolasjweber
 // @match       https://idp.scc.kit.edu/*
 // @match       https://ilias.studium.kit.edu/*
-// @match       https://ilias-medien.bibliothek.kit.edu/*
 // @match       https://koala.kit.edu/*
+// @match       https://ilias-medien.bibliothek.kit.edu/*
 // @match       https://campus.studium.kit.edu/*
 // @match       https://lt2srv.iar.kit.edu/*
 // @match       https://lecture-translator.kit.edu/*
@@ -30,457 +30,637 @@
 (function() {
     'use strict';
 
-    // --- UTILS ---
+    // This file mirrors the browser extension (scripts/utils.js, scripts/sites.js,
+    // scripts/federated_login_main.js). Keep them in sync when changing site logic.
 
-    function clickIfPresent(selector) {
-        const el = document.querySelector(selector);
+    /**
+     * Shared helpers and the generic login engine.
+     *
+     * Content scripts listed in the same manifest entry share one global scope,
+     * so everything declared here is available to sites.js and main.js.
+     */
 
-        if (el) {
-            el.click(); 
-            return true;
+    const KAL_DEFAULT_TIMEOUT_MS = 10000;   // how long to look for a login button
+    const KAL_CHECK_THROTTLE_MS = 100;      // min. delay between DOM checks
+    const KAL_CLICK_COOLDOWN_MS = 1500;     // pause after a click before trying another step
+
+    // --- Small DOM helpers -------------------------------------------------------
+
+    function isVisible(elOrSelector) {
+        const el = typeof elOrSelector === 'string'
+            ? document.querySelector(elOrSelector)
+            : elOrSelector;
+        return !!el && el.getClientRects().length > 0;
+    }
+
+    function isDisabled(el) {
+        return !!el.disabled || el.getAttribute('aria-disabled') === 'true';
+    }
+
+    /**
+     * Returns true if an input has a value, or if the browser marks it as autofilled.
+     * Chrome's built-in password manager keeps `value` empty for scripts until the
+     * user interacts with the page, but the field still matches `:autofill`.
+     */
+    function isFilled(el) {
+        if (!el) return false;
+        if (el.value && el.value.length > 0) return true;
+
+        for (const pseudo of [':autofill', ':-webkit-autofill']) {
+            try {
+                if (el.matches(pseudo)) return true;
+            } catch (e) {
+                // Pseudo-class not supported by this browser
+            }
         }
-
         return false;
     }
 
     /**
-     * Waits for an element to appear in the DOM, then runs the callback.
+     * Polls until `selector` is filled (by the browser or a password manager).
+     * Polling is used on purpose: autofill does not cause DOM mutations.
      */
-    function waitForElement(selector, callback, maxRetries = 20) {
-        let attempts = 0;
-        
+    function waitForAutoFill(selector, callback, timeoutMs = KAL_DEFAULT_TIMEOUT_MS) {
+        const start = Date.now();
+
         const check = setInterval(() => {
             const element = document.querySelector(selector);
-            attempts++;
 
-            if (element) {
+            if (isFilled(element)) {
                 clearInterval(check);
                 callback(element);
-            }
-            
-            if (attempts >= maxRetries) {
+            } else if (Date.now() - start >= timeoutMs) {
                 clearInterval(check);
-                console.log(`Give up waiting for: ${selector}`);
+                console.log('KIT Auto-Login: Timed out, fields were not populated.');
             }
-        }, 500);
+        }, 250);
     }
 
     /**
-     * Waits for an element of a specific tag containing specific text.
+     * Waits for an element matching `selector` to appear (MutationObserver based).
      */
-    function waitForElementByText(tag, textOrArray, callback, maxRetries = 20) {
-        let attempts = 0;
-        const searchTerms = Array.isArray(textOrArray) ? textOrArray : [textOrArray];
+    function waitForElement(selector, callback, timeoutMs = KAL_DEFAULT_TIMEOUT_MS) {
+        const existing = document.querySelector(selector);
+        if (existing) {
+            callback(existing);
+            return;
+        }
 
-        const check = setInterval(() => {
-            attempts++;
-            const allElements = document.querySelectorAll(tag);
-            
-            const found = Array.from(allElements).find(el => 
-                searchTerms.some(term => el.textContent.includes(term))
-            );
-
-            if (found) {
-                clearInterval(check);
-                callback(found);
+        const observer = new MutationObserver(() => {
+            const el = document.querySelector(selector);
+            if (el) {
+                cleanup();
+                callback(el);
             }
-            
-            if (attempts >= maxRetries) {
-                clearInterval(check);
-                console.log(`Give up waiting for ${tag} with text: ${searchTerms.join(" OR ")}`);
-            }
-        }, 500);
-    }
-
-    /**
-     * Stub for shouldRun since simple userscripts don't usually use complex async storage settings.
-     * Always resolves true.
-     */
-    function shouldRun(siteKey) {
-        return Promise.resolve(true);
-    }
-
-    // Helper to match domain
-    function matchDomain(domain) {
-        return hostname === domain || hostname.endsWith('.' + domain);
-    }
-
-    // --- AUTO-LOGIN ---
-
-    const href = window.location.href;
-    const hostname = window.location.hostname;
-
-    // 1. Shibboleth Identity Provider
-    if (matchDomain('idp.scc.kit.edu')) {
-        shouldRun('idp').then((allowed) => {
-            if (!allowed) return;
-            clickIfPresent('button#passkeys_login');
         });
+        const timer = setTimeout(() => {
+            cleanup();
+            console.log(`KIT Auto-Login: Gave up waiting for ${selector}`);
+        }, timeoutMs);
+
+        function cleanup() {
+            observer.disconnect();
+            clearTimeout(timer);
+        }
+
+        observer.observe(document.documentElement, { childList: true, subtree: true });
     }
 
-    // 2. ILIAS & Koala
-    if (matchDomain('ilias.studium.kit.edu') || matchDomain('koala.kit.edu')) {
-        const siteKey = matchDomain('koala.kit.edu') ? 'koala' : 'ilias';
-        shouldRun(siteKey).then((allowed) => {
-            if (!allowed) return;
+    // --- Generic step engine -----------------------------------------------------
 
-            const isLoggedIn = document.querySelectorAll(".il-avatar").length > 0;
-            const onLoginPage = href.includes("/login");
-            if (!isLoggedIn) {
-                if (onLoginPage || siteKey === 'koala') {
-                    clickIfPresent('#button_shib_login');
+    /**
+     * Tests a step's `path` condition against `location.pathname + location.search`.
+     * @param {string|RegExp|function|undefined} condition
+     *   string → substring match, RegExp → test, function(path) → boolean.
+     */
+    function matchesPath(condition) {
+        if (condition === undefined || condition === null) return true;
+
+        const path = window.location.pathname + window.location.search;
+        if (typeof condition === 'string') return path.includes(condition);
+        if (condition instanceof RegExp) return condition.test(path);
+        if (typeof condition === 'function') return !!condition(path);
+        return true;
+    }
+
+    function isLoggedIn(site) {
+        const indicator = site.loggedIn;
+        if (!indicator) return false;
+        if (typeof indicator === 'function') return !!indicator();
+        return !!document.querySelector(indicator);
+    }
+
+    function normalizeStep(step) {
+        return typeof step === 'string' ? { selector: step } : step;
+    }
+
+    /** Finds the first usable element for a step, or null. */
+    function findStepElement(step) {
+        const terms = step.text === undefined
+            ? null
+            : [].concat(step.text).map((t) => t.toLowerCase());
+
+        for (const el of document.querySelectorAll(step.selector)) {
+            if (terms) {
+                const content = (el.textContent || el.value || '').toLowerCase();
+                if (!terms.some((term) => content.includes(term))) continue;
+            }
+            if (isDisabled(el)) continue;
+            if (step.visible && !isVisible(el)) continue;
+            return el;
+        }
+        return null;
+    }
+
+    function performClick(el, step) {
+        const target = (step.clickInner && el.querySelector(step.clickInner)) || el;
+
+        if (step.pointerEvents) {
+            // Some frameworks only react to the full mouse event sequence
+            if (typeof target.focus === 'function') target.focus();
+            target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+            target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+        }
+        target.click();
+    }
+
+    /**
+     * Runs a declarative site definition (see sites.js for the format).
+     *
+     * - Stops as soon as `loggedIn` matches.
+     * - Steps are tried in order; each step is clicked at most once per URL,
+     *   and only one click happens per cooldown period.
+     * - In `watch` mode (SPAs) the engine keeps observing and resets when the URL
+     *   changes; otherwise it gives up after `timeout` ms.
+     */
+    function runSteps(site) {
+        const steps = (site.steps || []).map(normalizeStep);
+        const timeoutMs = site.watch ? Infinity : (site.timeout || KAL_DEFAULT_TIMEOUT_MS);
+
+        let currentUrl = window.location.href;
+        let clicked = new Set();
+        let lastClickAt = 0;
+        let pending = null;
+        let stopped = false;
+        let observer = null;
+        let timeoutTimer = null;
+
+        function stop() {
+            stopped = true;
+            if (observer) observer.disconnect();
+            clearTimeout(pending);
+            clearTimeout(timeoutTimer);
+        }
+
+        function schedule(delayMs = KAL_CHECK_THROTTLE_MS) {
+            if (stopped || pending !== null) return;
+            pending = setTimeout(() => {
+                pending = null;
+                check();
+            }, delayMs);
+        }
+
+        function check() {
+            if (stopped) return;
+
+            if (window.location.href !== currentUrl) {
+                // SPA navigation: allow all steps again on the new route
+                currentUrl = window.location.href;
+                clicked = new Set();
+                lastClickAt = 0;
+            }
+
+            if (isLoggedIn(site)) {
+                stop();
+                return;
+            }
+
+            const sinceLastClick = Date.now() - lastClickAt;
+            if (sinceLastClick < KAL_CLICK_COOLDOWN_MS) {
+                schedule(KAL_CLICK_COOLDOWN_MS - sinceLastClick);
+                return;
+            }
+
+            for (let i = 0; i < steps.length; i++) {
+                const step = steps[i];
+                if (clicked.has(i) || !matchesPath(step.path)) continue;
+
+                const el = findStepElement(step);
+                if (el) {
+                    clicked.add(i);
+                    lastClickAt = Date.now();
+                    performClick(el, step);
+                    break;
+                }
+            }
+
+            if (!site.watch && clicked.size === steps.length) stop();
+        }
+
+        observer = new MutationObserver(() => schedule());
+        observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true });
+
+        if (timeoutMs !== Infinity) {
+            timeoutTimer = setTimeout(stop, timeoutMs);
+        }
+
+        check();
+    }
+
+    /** Starts a site definition, honouring `waitForLoad` and `delay`. */
+    function startSite(site) {
+        const begin = () => {
+            setTimeout(() => {
+                if (typeof site.run === 'function') {
+                    site.run(site);
                 } else {
-                    clickIfPresent('.header-inner a[href*="login.php"]');
+                    runSteps(site);
                 }
+            }, site.delay || 0);
+        };
+
+        if (site.waitForLoad && document.readyState !== 'complete') {
+            window.addEventListener('load', begin, { once: true });
+        } else {
+            begin();
+        }
+    }
+
+    /**
+     * Declarative definitions of all supported sites.
+     *
+     * Used by the content scripts (main.js) and by the options page (labels/urls).
+     * The order of this object is the "default" order on the options page.
+     *
+     * Site fields:
+     *   label        Name shown on the options page.
+     *   url          Link opened from the options page.
+     *   hosts        Exact hostnames this definition applies to. These must also be
+     *                listed in the `matches` of the content script in manifest.json.
+     *   loggedIn     CSS selector or function() → boolean. If it matches, nothing is clicked.
+     *   steps        Login buttons to click, tried in order. A step is a CSS selector string or:
+     *                  selector       CSS selector (required)
+     *                  text           string or array; element text must contain one (case-insensitive)
+     *                  path           string (substring), RegExp or function(path) on pathname + search
+     *                  visible        only click if the element is rendered
+     *                  clickInner     CSS selector of a child to click instead (falls back to the element)
+     *                  pointerEvents  send focus/mousedown/mouseup before click (for picky frameworks)
+     *   watch        Keep observing for SPA navigation instead of giving up after `timeout`.
+     *   timeout      Milliseconds to look for buttons (default 10000, ignored with `watch`).
+     *   delay        Milliseconds to wait before starting.
+     *   waitForLoad  Wait for the window `load` event before starting.
+     *   run          Custom function(site) used instead of the step engine.
+     */
+
+    const KIT_SITES = {
+        idp: {
+            label: "Shibboleth Identity Provider",
+            url: "https://idp.scc.kit.edu",
+            hosts: ["idp.scc.kit.edu"],
+            run: runIdpLogin,
+        },
+        ilias: {
+            label: "ILIAS",
+            url: "https://ilias.studium.kit.edu",
+            hosts: ["ilias.studium.kit.edu"],
+            loggedIn: ".il-avatar",
+            steps: [
+                // Step 2: on the login selection page
+                { selector: "#button_shib_login", path: "/login" },
+                // Step 1: on any other page while logged out
+                { selector: '.header-inner a[href*="login.php"]', path: (p) => !p.includes("/login") },
+            ],
+        },
+        campus: {
+            label: "Campus Management",
+            url: "https://campus.studium.kit.edu",
+            hosts: ["campus.studium.kit.edu"],
+            steps: [
+                ".login-link.ui-login",
+                ".shib-login.shib-button",
+            ],
+        },
+        campus_plus: {
+            label: "Campus Plus Portal",
+            url: "https://plus.campus.kit.edu",
+            hosts: ["plus.campus.kit.edu"],
+            loggedIn: 'button[title="Abmelden"], button[title="Sign Out"]',
+            steps: ['a[href^="/api/user/oidc-login"]'],
+        },
+        wiwi_portal: {
+            label: "WiWi Portal",
+            url: "https://portal.wiwi.kit.edu",
+            hosts: ["portal.wiwi.kit.edu"],
+            loggedIn: 'a[href="/account/logout"]',
+            watch: true,
+            steps: [
+                'a[href^="/api/account/login-oidc"]',
+                'a[href^="/account/login"]',
+            ],
+        },
+        scc: {
+            label: "SCC Self-Service",
+            url: "https://my.scc.kit.edu",
+            hosts: ["my.scc.kit.edu"],
+            loggedIn: "a#logout",
+            steps: ["a.loginlogout"],
+        },
+        bwjupyter: {
+            label: "bwJupyter",
+            url: "https://hub.bwjupyter.de",
+            hosts: ["hub.bwjupyter.de"],
+            steps: ['a[href^="/hub/oauth_login"]'],
+        },
+        bwsyncandshare: {
+            label: "bwSync&Share",
+            url: "https://bwsyncandshare.kit.edu",
+            hosts: ["bwsyncandshare.kit.edu"],
+            steps: ['a[href*="/apps/user_saml/saml/login"]'],
+        },
+        gitlab: {
+            label: "GitLab",
+            url: "https://gitlab.kit.edu",
+            hosts: ["gitlab.kit.edu"],
+            loggedIn: 'a[href*="/sign_out"]',
+            steps: [
+                // Prefer the SSO (omniauth) button, fall back to the first submit button
+                { selector: 'form[action^="/users/auth/"] button[type="submit"], a[href^="/users/auth/"]', path: "/users/sign_in" },
+                { selector: 'button[type="submit"]', path: "/users/sign_in" },
+            ],
+        },
+        hochschulsport: {
+            label: "Hochschulsport",
+            url: "https://mein-hochschul.sport.kit.edu",
+            hosts: ["mein-hochschul.sport.kit.edu"],
+            watch: true,
+            delay: 800, // let the SPA bind its event handlers
+            steps: [
+                { selector: '[data-test-id="saml-login-button"]', path: /^\/[^?]*login/, visible: true, pointerEvents: true },
+                { selector: ".btn-primary", text: ["log", "anmeld"], path: /^\/[^?]*login/, visible: true, pointerEvents: true },
+            ],
+        },
+        signmeup: {
+            label: "SignMeUp",
+            url: "https://signmeup.studium.kit.edu",
+            hosts: ["signmeup.studium.kit.edu"],
+            loggedIn: 'a[href="/user/settings"]',
+            watch: true,
+            steps: [
+                { selector: 'a[href="/api/user/oidc-login"]', clickInner: "button" },
+                { selector: 'a[href="/user/login"]', clickInner: "button" },
+            ],
+        },
+        ki_toolbox: {
+            label: "KI Toolbox",
+            url: "https://ki-toolbox.scc.kit.edu/auth",
+            hosts: ["ki-toolbox.scc.kit.edu"],
+            loggedIn: () => isVisible("#sidebar"),
+            waitForLoad: true,
+            delay: 1000, // the app may briefly show /auth before restoring an existing session
+            steps: [
+                { selector: "button", text: "Continue with KIT-Account", path: "/auth" },
+            ],
+        },
+        bewerbung: {
+            label: "Application Portal",
+            url: "https://bewerbung.studium.kit.edu",
+            hosts: ["bewerbung.studium.kit.edu"],
+            steps: [
+                // The button has a generic (potentially changing) class name, so match by text
+                { selector: "button", text: ["Mit KIT-Account anmelden", "Login with KIT account"] },
+            ],
+        },
+        ilias_medien: {
+            label: "ILIAS Medienportal",
+            url: "https://ilias-medien.bibliothek.kit.edu",
+            hosts: ["ilias-medien.bibliothek.kit.edu"],
+            steps: [
+                { selector: 'a.login-button[href*="/auth"]', path: "/login" },
+            ],
+        },
+        lecture_translator: {
+            label: "Lecture Translator",
+            url: "https://lecture-translator.kit.edu",
+            hosts: ["lecture-translator.kit.edu", "lt2srv.iar.kit.edu"],
+            loggedIn: 'a[href="/logout"]',
+            steps: [
+                // Intermediate auth page
+                { selector: 'a[href^="/dex/auth/shib"]', path: "/dex/auth" },
+                // Main page, logged out
+                { selector: 'img[alt="Login"]', path: (p) => !p.includes("/dex/auth") },
+            ],
+        },
+        fels: {
+            label: "Federated Login Service",
+            url: "https://fels.scc.kit.edu",
+            hosts: ["fels.scc.kit.edu"],
+            run: startFederatedLogin,
+        },
+        bwidm: {
+            label: "Federated Identity Management",
+            url: "https://login.bwidm.de",
+            hosts: ["login.bwidm.de", "bwidm.scc.kit.edu"],
+            run: startFederatedLogin,
+        },
+        koala: {
+            label: "KOALA",
+            url: "https://koala.kit.edu",
+            hosts: ["koala.kit.edu"],
+            loggedIn: ".il-avatar",
+            steps: ["#button_shib_login"],
+        },
+    };
+
+    // --- Custom site logic -------------------------------------------------------
+
+    const IDP_MAX_ATTEMPTS = 2;
+    const IDP_ATTEMPT_WINDOW_MS = 2 * 60 * 1000;
+    const IDP_ATTEMPTS_KEY = "kitAutoLogin.idpAttempts";
+
+    function getRecentIdpAttempts() {
+        try {
+            const stored = JSON.parse(sessionStorage.getItem(IDP_ATTEMPTS_KEY) || "[]");
+            return stored.filter((time) => Date.now() - time < IDP_ATTEMPT_WINDOW_MS);
+        } catch (e) {
+            return [];
+        }
+    }
+
+    /**
+     * Submits the IdP login form once the password manager has filled it.
+     * Gives up after IDP_MAX_ATTEMPTS automatic submits within a short window
+     * (per tab), so outdated stored credentials cannot cause an account lockout.
+     */
+    function runIdpLogin() {
+        const attempts = getRecentIdpAttempts();
+        if (attempts.length >= IDP_MAX_ATTEMPTS) {
+            console.warn("KIT Auto-Login: Automatic login failed repeatedly, please log in manually.");
+            return;
+        }
+
+        waitForAutoFill("#password", () => {
+            // Double check username just in case
+            if (!isFilled(document.querySelector("#username"))) return;
+
+            const submit = document.querySelector("#sbmt");
+            if (!submit) return;
+
+            attempts.push(Date.now());
+            try {
+                sessionStorage.setItem(IDP_ATTEMPTS_KEY, JSON.stringify(attempts));
+            } catch (e) {
+                // Storage unavailable; still submit
             }
+            submit.click();
         });
     }
 
-    // 2.5 ILIAS Medienportal
-    if (matchDomain('ilias-medien.bibliothek.kit.edu')) {
-        shouldRun('ilias_medien').then((allowed) => {
-            if (!allowed) return;
-
-            if (href.includes("/login")) {
-                clickIfPresent('a.login-button[href*="/auth"]');
-            }
-        });
+    /**
+     * FeLS / bwIDM need access to the page's PrimeFaces object, so the actual work
+     * happens in federated_login_main.js (MAIN world). This only signals it to start.
+     */
+    function startFederatedLogin() {
+        document.documentElement.dataset.kitAutoLogin = "federated";
+        document.dispatchEvent(new CustomEvent("kit-auto-login:federated"));
     }
 
-    // 3. Campus Management
-    if (matchDomain('campus.studium.kit.edu')) {
-        shouldRun('campus').then((allowed) => {
-            if (!allowed) return;
-            const loginSelector = '.login-link.ui-login';
-            const loginStatus = document.querySelector(loginSelector);
-            if (loginStatus) {
-                const clickedMain = clickIfPresent(loginSelector);
-                const clickedShib = clickIfPresent('.shib-login.shib-button');
+    // --- Userscript overrides ---------------------------------------------------
+
+    // Safari: log in with a passkey instead of waiting for password autofill
+    KIT_SITES.idp.run = undefined;
+    KIT_SITES.idp.steps = ['button#passkeys_login'];
+
+    // Userscripts run isolated from the page, so inject the PrimeFaces logic
+    // (same code as scripts/federated_login_main.js in the extension)
+    // Runs in the page's MAIN world on https://fels.scc.kit.edu/*, https://login.bwidm.de/*
+    // and https://bwidm.scc.kit.edu/* so it can use the page's PrimeFaces object.
+    //
+    // It does nothing until the isolated content script (which can read the extension
+    // settings) signals that auto-login is enabled for this site.
+
+    function federatedLoginMain() {
+        const SIGNAL_EVENT = 'kit-auto-login:federated';
+        const TIMEOUT_MS = 10000;
+        let started = false;
+
+        function waitForElement(selector, callback) {
+            const existing = document.querySelector(selector);
+            if (existing) {
+                callback(existing);
+                return;
             }
-        });
-    }
-
-    // 4. Lecture Translator
-    if (matchDomain('lt2srv.iar.kit.edu') || matchDomain('lecture-translator.kit.edu')) {
-        shouldRun('lecture_translator').then((allowed) => {
-            if (!allowed) return;
-            const isDexAuth = href.includes("/dex/auth");
-            const hasLogoutBtn = document.querySelector('a[href="/logout"]');
-            if (isDexAuth) {
-                clickIfPresent('a[href^="/dex/auth/shib"]');
-            } else if (!hasLogoutBtn) {
-                clickIfPresent('img[alt="Login"]');
-            }
-        });
-    }
-
-    // 5. Bewerbung
-    if (matchDomain('bewerbung.studium.kit.edu')) {
-        shouldRun('bewerbung').then((allowed) => {
-            if (!allowed) return;
-            const loginLabels = ["Mit KIT-Account anmelden", "Login with KIT account"];
-            waitForElementByText('button', loginLabels, (button) => {
-                button.click();
-            });
-        });
-    }
-
-    // 6. Campus Plus
-    if (matchDomain('plus.campus.kit.edu')) {
-        shouldRun('campus_plus').then((allowed) => {
-            if (!allowed) return;
-            const loginSelector = 'a[href^="/api/user/oidc-login"]';
-            const logoutSelector = 'button[title="Abmelden"], button[title="Sign Out"]';
-            if (!document.querySelector(logoutSelector)) {
-                waitForElement(loginSelector, (link) => {
-                    link.click();
-                });
-            }
-        });
-    }
-
-    // 7. WiWi Portal
-    if (matchDomain('portal.wiwi.kit.edu')) {
-        shouldRun('wiwi_portal').then((allowed) => {
-            if (!allowed) return;
-            const step1_Selector = 'a[href^="/account/login"]';
-            const step2_Selector = 'a[href^="/api/account/login-oidc"]';
-            const logoutSelector = 'a[href="/account/logout"]';
-
-            let clickedStep1 = false;
-            let clickedStep2 = false;
-
-            function checkDOM() {
-                if (document.querySelector(logoutSelector)) {
-                    return true; 
-                }
-                
-                const step2Btn = document.querySelector(step2_Selector);
-                if (step2Btn && !clickedStep2) {
-                    clickedStep2 = true;
-                    step2Btn.click();
-                }
-
-                const step1Btn = document.querySelector(step1_Selector);
-                if (step1Btn && !clickedStep1) {
-                    clickedStep1 = true;
-                    step1Btn.click();
-                }
-                return false;
-            }
-
-            if (checkDOM()) return;
 
             const observer = new MutationObserver(() => {
-                if (checkDOM()) {
-                    observer.disconnect();
+                const el = document.querySelector(selector);
+                if (el) {
+                    cleanup();
+                    callback(el);
                 }
             });
+            const timer = setTimeout(cleanup, TIMEOUT_MS);
 
-            observer.observe(document.body, { childList: true, subtree: true });
-        });
-    }
+            function cleanup() {
+                observer.disconnect();
+                clearTimeout(timer);
+            }
 
-    // 8. GitLab
-    if (matchDomain('gitlab.kit.edu')) {
-        shouldRun('gitlab').then((allowed) => {
-            if (!allowed) return;
-            const loginSelector = 'button[type=submit]';
-            
-            const loginStatus = document.querySelector('a[href*="/sign_out"]');
-            if (loginStatus) return;
-            
-            waitForElement(loginSelector, (link) => {
-                link.click();
-            });
-        });
-    }
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+        }
 
-    // 9. SCC
-    if (matchDomain('my.scc.kit.edu')) {
-        shouldRun('scc').then((allowed) => {
-            if (!allowed) return;
+        // FeLS: PrimeFaces autocomplete
+        function selectViaAutocomplete(input) {
+            input.focus();
+            input.value = 'KIT';
 
-            const loginStatus = 'a#logout';
-            const loginSelector = 'a.loginlogout';
+            // Trigger PrimeFaces autocomplete search
+            const widget = window.PrimeFaces && PrimeFaces.getWidgetById('searchAutocompl');
+            if (widget && widget.search) {
+                widget.search('KIT');
+            } else {
+                // Fallback
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                PrimeFaces.ab({ s: "searchAutocompl", e: "change", f: "form", p: "searchAutocompl", u: "infoPnl" });
+            }
 
-            if (document.querySelector(loginStatus)) return;
+            // Need to wait for autocomplete results to appear
+            setTimeout(() => {
+                input.dispatchEvent(new KeyboardEvent('keydown', {
+                    bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13
+                }));
 
-            clickIfPresent(loginSelector);
-        });
-    }
+                setTimeout(() => {
+                    PrimeFaces.ab({ s: "login", f: "form", u: "form" });
+                }, 500);
+            }, 500);
+        }
 
-    // 10. Federated Login (FeLS & bwIDM)
-    if (matchDomain('fels.scc.kit.edu') || matchDomain('login.bwidm.de') || matchDomain('bwidm.scc.kit.edu')) {
-        const siteKey = (matchDomain('login.bwidm.de') || matchDomain('bwidm.scc.kit.edu')) ? 'bwidm' : 'fels';
-        shouldRun(siteKey).then((allowed) => {
-            if (!allowed) return;
+        // bwIDM: PrimeFaces filtered select list
+        function selectViaFilter(input) {
+            input.focus();
+            input.value = 'KIT';
+
+            // Trigger PrimeFaces filter
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'T' }));
+
+            // Need to wait for filter results to appear
+            setTimeout(() => {
+                const listItems = document.querySelectorAll('.ui-selectlistbox-item');
+                for (const item of listItems) {
+                    if (item.style.display !== 'none') {
+                        item.click();
+                        break;
+                    }
+                }
+
+                setTimeout(() => {
+                    const loginBtn = document.getElementById('login');
+                    if (loginBtn) {
+                        loginBtn.click();
+                    } else {
+                        PrimeFaces.ab({ s: "login", f: "form", u: "form" });
+                    }
+                }, 500);
+            }, 500);
+        }
+
+        function start() {
+            if (started) return;
+            started = true;
 
             waitForElement('#searchAutocompl_input, #selectBox_filter', (inputField) => {
                 if (inputField.id === 'searchAutocompl_input' && !inputField.value) {
-                    const script = document.createElement('script');
-                    script.textContent = `
-                        (function() {
-                            var input = document.getElementById('searchAutocompl_input');
-                            if (!input) return;
-                            
-                            input.focus();
-                            input.value = 'KIT';
-                            
-                            // Trigger PrimeFaces autocomplete search
-                            var widget = PrimeFaces.getWidgetById('searchAutocompl');
-                            if (widget && widget.search) {
-                                widget.search('KIT');
-                            } else {
-                                // Fallback
-                                input.dispatchEvent(new Event('input', { bubbles: true }));
-                                input.dispatchEvent(new Event('change', { bubbles: true }));
-                                PrimeFaces.ab({s:"searchAutocompl",e:"change",f:"form",p:"searchAutocompl",u:"infoPnl"});
-                            }
-                            
-                            // Need to wait for autocomplete results to appear
-                            setTimeout(function() {
-                                input.dispatchEvent(new KeyboardEvent('keydown', {
-                                    bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13
-                                }));
-                                
-                                setTimeout(function() {
-                                    PrimeFaces.ab({s:"login",f:"form",u:"form"});
-                                }, 500);
-                            }, 500);
-                        })();
-                    `;
-                    document.documentElement.appendChild(script);
-                    script.remove();
+                    selectViaAutocomplete(inputField);
                 } else if (inputField.id === 'selectBox_filter') {
-                    const script = document.createElement('script');
-                    script.textContent = `
-                        (function() {
-                            var input = document.getElementById('selectBox_filter');
-                            if (!input) return;
-                            
-                            input.focus();
-                            input.value = 'KIT';
-                            
-                            // Trigger PrimeFaces filter
-                            input.dispatchEvent(new Event('input', { bubbles: true }));
-                            input.dispatchEvent(new Event('change', { bubbles: true }));
-                            input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'T' }));
-                            
-                            // Need to wait for filter results to appear
-                            setTimeout(function() {
-                                var listItems = document.querySelectorAll('.ui-selectlistbox-item');
-                                for (var i = 0; i < listItems.length; i++) {
-                                    if (listItems[i].style.display !== 'none') {
-                                        listItems[i].click();
-                                        break;
-                                    }
-                                }
-                                
-                                setTimeout(function() {
-                                    var loginBtn = document.getElementById('login');
-                                    if (loginBtn) {
-                                        loginBtn.click();
-                                    } else {
-                                        PrimeFaces.ab({s:"login",f:"form",u:"form"});
-                                    }
-                                }, 500);
-                            }, 500);
-                        })();
-                    `;
-                    document.documentElement.appendChild(script);
-                    script.remove();
+                    selectViaFilter(inputField);
                 }
             });
-        });
+        }
+
+        // The isolated script may have run before or after this one
+        if (document.documentElement.dataset.kitAutoLogin === 'federated') {
+            start();
+        } else {
+            document.addEventListener(SIGNAL_EVENT, start, { once: true });
+        }
     }
 
-    // 10.1 KI Toolbox
-    if (matchDomain('ki-toolbox.scc.kit.edu')) {
-        shouldRun('ki_toolbox').then((allowed) => {
-            if (!allowed) return;
-
-            const runWhenPageLoaded = (callback) => {
-                if (document.readyState === 'complete') {
-                    callback();
-                    return;
-                }
-
-                window.addEventListener('load', callback, { once: true });
-            };
-
-            runWhenPageLoaded(() => {
-                setTimeout(() => {
-                    const sidebar = document.querySelector('#sidebar');
-                    if (sidebar && sidebar.getClientRects().length > 0) return;
-
-                    if (href.includes('/auth')) {
-                        waitForElementByText('button', 'Continue with KIT-Account', (button) => {
-                            button.click();
-                        });
-                    }
-                }, 1000);
-            });
-        });
+    function injectFederatedLogin() {
+        const script = document.createElement('script');
+        script.textContent = '(' + federatedLoginMain.toString() + ')();';
+        document.documentElement.appendChild(script);
+        script.remove();
+        startFederatedLogin();
     }
 
-    // 11. bwJupyter
-    if (matchDomain('hub.bwjupyter.de')) {
-        shouldRun('bwjupyter').then((allowed) => {
-            if (!allowed) return;
-            clickIfPresent('a[href^="/hub/oauth_login"]');
-        });
-    }
+    KIT_SITES.fels.run = injectFederatedLogin;
+    KIT_SITES.bwidm.run = injectFederatedLogin;
 
-    // 12. bwSync&Share
-    if (matchDomain('bwsyncandshare.kit.edu')) {
-        shouldRun('bwsyncandshare').then((allowed) => {
-            if (!allowed) return;
-            clickIfPresent('a[href*="/apps/user_saml/saml/login"]');
-        });
-    }
+    // --- Entry point -------------------------------------------------------------
 
-    // 13. Hochschulsport
-    if (matchDomain('mein-hochschul.sport.kit.edu')) {
-        shouldRun('hochschulsport').then((allowed) => {
-            if (!allowed) return;
-
-            let clicked = false;
-
-            setTimeout(() => {
-                setInterval(() => {
-                    if (!window.location.pathname.includes('login')) {
-                        clicked = false; // Reset if we navigate away inside the SPA
-                        return;
-                    }
-
-                    if (clicked) return;
-
-                    // Try the explicit test-id first, fallback to checking button text if it changes layout
-                    const buttons = Array.from(document.querySelectorAll('[data-test-id="saml-login-button"], .btn-primary'));
-                    const btn = buttons.find(b => {
-                        const text = (b.value || b.textContent || b.innerText || '').toLowerCase();
-                        return b.hasAttribute('data-test-id') || text.includes('log') || text.includes('anmeld');
-                    });
-
-                    // Ensure the button is actually rendered, visible, and not disabled
-                    if (btn && btn.offsetParent !== null && !btn.disabled && !btn.dataset.autoClicked) {
-                        btn.dataset.autoClicked = 'true';
-                        clicked = true;
-
-                        if (typeof btn.focus === 'function') btn.focus();
-                        btn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-                        btn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
-                        btn.click();
-                    }
-                }, 500);
-            }, 800); // Initial delay to ensure page frameworks have bound their events
-        });
-    }
-
-    // 14. SignMeUp
-    if (matchDomain('signmeup.studium.kit.edu')) {
-        shouldRun('signmeup').then((allowed) => {
-            if (!allowed) return;
-
-            const logoutSelector = 'a[href="/user/logout"]';
-            const step1_Selector = 'a[href="/user/login"]';
-            const step2_Selector = 'a[href="/api/user/oidc-login"]';
-
-            let clickedStep1 = false;
-            let clickedStep2 = false;
-
-            function checkDOM() {
-                if (document.querySelector(logoutSelector)) {
-                    return true; 
-                }
-                
-                const step2Btn = document.querySelector(step2_Selector);
-                if (step2Btn && !clickedStep2) {
-                    clickedStep2 = true;
-                    const btn = step2Btn.querySelector('button') || step2Btn;
-                    btn.click();
-                }
-
-                const step1Btn = document.querySelector(step1_Selector);
-                if (step1Btn && !clickedStep1) {
-                    clickedStep1 = true;
-                    const btn = step1Btn.querySelector('button') || step1Btn;
-                    btn.click();
-                }
-                return false;
-            }
-
-            if (checkDOM()) return;
-
-            const observer = new MutationObserver(() => {
-                if (checkDOM()) {
-                    observer.disconnect();
-                }
-            });
-
-            observer.observe(document.body, { childList: true, subtree: true });
-        });
-    }
+    const site = Object.values(KIT_SITES).find((s) => s.hosts.includes(window.location.hostname));
+    if (site) startSite(site);
 
 })();

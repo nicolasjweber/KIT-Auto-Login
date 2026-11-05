@@ -1,23 +1,5 @@
-const sites = {
-  "idp": { label: "Shibboleth Identity Provider", url: "https://idp.scc.kit.edu" },
-  "ilias": { label: "ILIAS", url: "https://ilias.studium.kit.edu" },
-  "campus": { label: "Campus Management", url: "https://campus.studium.kit.edu" },
-  "campus_plus": { label: "Campus Plus Portal", url: "https://plus.campus.kit.edu" },
-  "wiwi_portal": { label: "WiWi Portal", url: "https://portal.wiwi.kit.edu" },
-  "scc": { label: "SCC Self-Service", url: "https://my.scc.kit.edu" },
-  "bwjupyter": { label: "bwJupyter", url: "https://hub.bwjupyter.de" },
-  "bwsyncandshare": { label: "bwSync&Share", url: "https://bwsyncandshare.kit.edu" },
-  "gitlab": { label: "GitLab", url: "https://gitlab.kit.edu" },
-  "hochschulsport": { label: "Hochschulsport", url: "https://mein-hochschul.sport.kit.edu" },
-  "signmeup": { label: "SignMeUp", url: "https://signmeup.studium.kit.edu" },
-  "ki_toolbox": { label: "KI Toolbox", url: "https://ki-toolbox.scc.kit.edu/auth" },
-  "bewerbung": { label: "Application Portal", url: "https://bewerbung.studium.kit.edu" },
-  "ilias_medien": { label: "ILIAS Medienportal", url: "https://ilias-medien.bibliothek.kit.edu" },
-  "lecture_translator": { label: "Lecture Translator", url: "https://lecture-translator.kit.edu" },
-  "fels": { label: "Federated Login Service", url: "https://fels.scc.kit.edu" },
-  "bwidm": { label: "Federated Identity Management", url: "https://login.bwidm.de" },
-  "koala": { label: "KOALA", url: "https://koala.kit.edu" },
-};
+// Site labels and URLs come from the shared definitions in scripts/sites.js
+const sites = KIT_SITES;
 
 const defaultSortOrder = 'default';
 const sortOrderStorageKey = 'siteSortOrder';

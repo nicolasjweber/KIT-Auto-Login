@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "KIT Auto-Login",
-  "version": "2026.7.3",
+  "version": "2026.11.1",
   "description": "Zero-click login for KIT services. Automatically clicks through the login for ILIAS, CAS Campus, and other portals.",
   "browser_specific_settings": {
     "gecko": {
@@ -37,84 +37,40 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://idp.scc.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/idp-login.js"],
-      "run_at": "document_end"
-    },
-    {
-      "matches": ["https://ilias.studium.kit.edu/*", "https://koala.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/ilias.js"],
+      "matches": [
+        "https://idp.scc.kit.edu/*",
+        "https://ilias.studium.kit.edu/*",
+        "https://koala.kit.edu/*",
+        "https://ilias-medien.bibliothek.kit.edu/*",
+        "https://campus.studium.kit.edu/*",
+        "https://lt2srv.iar.kit.edu/*",
+        "https://lecture-translator.kit.edu/*",
+        "https://bewerbung.studium.kit.edu/*",
+        "https://plus.campus.kit.edu/*",
+        "https://portal.wiwi.kit.edu/*",
+        "https://gitlab.kit.edu/*",
+        "https://my.scc.kit.edu/*",
+        "https://fels.scc.kit.edu/*",
+        "https://login.bwidm.de/*",
+        "https://bwidm.scc.kit.edu/*",
+        "https://ki-toolbox.scc.kit.edu/*",
+        "https://hub.bwjupyter.de/*",
+        "https://bwsyncandshare.kit.edu/*",
+        "https://mein-hochschul.sport.kit.edu/*",
+        "https://signmeup.studium.kit.edu/*"
+      ],
+      "js": ["scripts/utils.js", "scripts/sites.js", "scripts/main.js"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://ilias-medien.bibliothek.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/ilias-medien.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://campus.studium.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/campus.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://lt2srv.iar.kit.edu/*", "https://lecture-translator.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/lecture-translator.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://bewerbung.studium.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/bewerbung.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://plus.campus.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/campus-plus.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://portal.wiwi.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/wiwi-portal.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://gitlab.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/gitlab.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://my.scc.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/scc.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://fels.scc.kit.edu/*", "https://login.bwidm.de/*", "https://bwidm.scc.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/federated_login.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://ki-toolbox.scc.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/ki-toolbox.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://hub.bwjupyter.de/*"],
-      "js": ["scripts/utils.js", "scripts/bwjupyter.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://bwsyncandshare.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/bwsyncandshare.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://mein-hochschul.sport.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/hochschulsport.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://signmeup.studium.kit.edu/*"],
-      "js": ["scripts/utils.js", "scripts/signmeup.js"],
-      "run_at": "document_idle"
+      "matches": [
+        "https://fels.scc.kit.edu/*",
+        "https://login.bwidm.de/*",
+        "https://bwidm.scc.kit.edu/*"
+      ],
+      "js": ["scripts/federated_login_main.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
     }
   ]
 }
