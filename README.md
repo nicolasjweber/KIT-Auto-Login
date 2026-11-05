@@ -38,7 +38,7 @@ Safari on iOS and macOS is supported through a userscript version of this add-on
 This extension automates the clicking of login buttons, but it **does not store your passwords, passkeys, or cookies**. 
 
 - **Firefox & Chromium:** For fully automatic login, ensure your password manager (or browser) is configured to autofill your KIT username and password.
-- **Safari:** The Safari userscript supports both Passkeys and password autofill—once your passkey is confirmed or your password manager fills in your credentials, login proceeds automatically.
+- **Safari:** The Safari userscript supports both Passkeys and password autofill. Once your passkey is confirmed or your password manager fills in your credentials, login proceeds automatically.
 - If the extension isn't working, verify in your browser extension settings that it has been granted permission to read and change data on the supported KIT websites.
 
 ## Screenshot & Supported Sites
