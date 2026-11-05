@@ -233,6 +233,207 @@ function buildChromeWebStoreHtml(isDark, lightPopupFileUrl, darkPopupFileUrl) {
 </html>`;
 }
 
+function buildSmallPromoHtml(isDark) {
+    const iconSvgUrl = 'file:///' + path.join(repoRoot, 'icons', 'icon.svg').replace(/\\/g, '/');
+    const bgColor = isDark ? '#16181a' : '#f1f3f5';
+    const textColor = isDark ? '#f1f3f5' : '#18181b';
+    const subtextColor = isDark ? '#a1a1aa' : '#52525b';
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 440px;
+    height: 280px;
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: ${bgColor};
+    color: ${textColor};
+  }
+  .canvas {
+    width: 440px;
+    height: 280px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 36px 40px;
+    gap: 18px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .brand img {
+    width: 58px;
+    height: 58px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, ${isDark ? '0.35' : '0.1'});
+  }
+  h1 {
+    font-size: 31px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  h1 span {
+    color: #009682;
+  }
+  p {
+    font-size: 16px;
+    line-height: 1.45;
+    color: ${subtextColor};
+  }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="brand">
+      <img src="${iconSvgUrl}" alt="KIT Auto-Login">
+      <h1>KIT <span>Auto-Login</span></h1>
+    </div>
+    <p>
+      Zero-click login for ILIAS, Campus Management, GitLab, WiWi Portal, and other KIT services.
+    </p>
+  </div>
+</body>
+</html>`;
+}
+
+function buildMarqueePromoHtml(isDark, lightPopupFileUrl, darkPopupFileUrl) {
+    const iconSvgUrl = 'file:///' + path.join(repoRoot, 'icons', 'icon.svg').replace(/\\/g, '/');
+    const bgColor = isDark ? '#16181a' : '#f1f3f5';
+    const textColor = isDark ? '#f1f3f5' : '#18181b';
+    const subtextColor = isDark ? '#a1a1aa' : '#52525b';
+    const primaryPopupUrl = isDark ? darkPopupFileUrl : lightPopupFileUrl;
+    const secondaryPopupUrl = isDark ? lightPopupFileUrl : darkPopupFileUrl;
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1400px;
+    height: 560px;
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: ${bgColor};
+    color: ${textColor};
+  }
+  .canvas {
+    width: 1400px;
+    height: 560px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 96px;
+    gap: 56px;
+  }
+  .left {
+    flex: 0 0 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .brand img {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, ${isDark ? '0.35' : '0.1'});
+  }
+  h1 {
+    font-size: 46px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  h1 span {
+    color: #009682;
+  }
+  .subtitle {
+    font-size: 21px;
+    line-height: 1.55;
+    color: ${subtextColor};
+  }
+  .right {
+    position: relative;
+    flex: 1;
+    height: 560px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 42px;
+  }
+  .popup-frame {
+    width: 420px;
+    height: 560px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)'};
+    box-shadow: 0 20px 50px rgba(0, 0, 0, ${isDark ? '0.55' : '0.14'});
+    position: relative;
+  }
+  .popup-frame.primary {
+    z-index: 2;
+    transform: translate(-65px, 0);
+    background: ${isDark ? '#121212' : '#f8f9fa'};
+  }
+  .popup-frame.secondary {
+    position: absolute;
+    right: 10px;
+    top: 76px;
+    width: 380px;
+    height: 520px;
+    z-index: 1;
+    opacity: 0.94;
+    transform: translate(10px, 0) scale(0.94);
+    background: ${isDark ? '#f8f9fa' : '#121212'};
+  }
+  iframe {
+    width: 500px;
+    height: 700px;
+    border: none;
+    transform: scale(0.84);
+    transform-origin: top left;
+    pointer-events: none;
+  }
+  .popup-frame.secondary iframe {
+    transform: scale(0.76);
+  }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="left">
+      <div class="brand">
+        <img src="${iconSvgUrl}" alt="KIT Auto-Login">
+        <h1>KIT <span>Auto-Login</span></h1>
+      </div>
+      <p class="subtitle">
+        Zero-click login for KIT services. Automatically clicks through the login pages for ILIAS, Campus Management, GitLab, WiWi Portal, and other portals.
+      </p>
+    </div>
+    <div class="right">
+      <div class="popup-frame primary">
+        <iframe src="${primaryPopupUrl}"></iframe>
+      </div>
+      <div class="popup-frame secondary">
+        <iframe src="${secondaryPopupUrl}"></iframe>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
 function runChrome(chromeBin, args) {
     execFileSync(chromeBin, args, { stdio: 'ignore' });
 }
@@ -336,6 +537,59 @@ function main() {
             ]);
 
             console.log(`Updated assets/screenshot_cws_${mode}.png (1280x800px)`);
+        }
+
+        // 3. Chrome Web Store promo tiles: Small (440x280) and Marquee (1400x560)
+        const promoTiles = [
+            {
+                name: 'promo_small_light.png',
+                width: 440,
+                height: 280,
+                html: buildSmallPromoHtml(false),
+            },
+            {
+                name: 'promo_small_dark.png',
+                width: 440,
+                height: 280,
+                html: buildSmallPromoHtml(true),
+            },
+            {
+                name: 'promo_marquee_light.png',
+                width: 1400,
+                height: 560,
+                html: buildMarqueePromoHtml(false, lightPopupFileUrl, darkPopupFileUrl),
+            },
+            {
+                name: 'promo_marquee_dark.png',
+                width: 1400,
+                height: 560,
+                html: buildMarqueePromoHtml(true, lightPopupFileUrl, darkPopupFileUrl),
+            },
+        ];
+
+        for (const tile of promoTiles) {
+            const tileHtmlPath = path.join(tmpDir, `${tile.name}.html`);
+            const tileFileUrl = 'file:///' + tileHtmlPath.replace(/\\/g, '/');
+            const outPath = path.join(repoRoot, 'assets', tile.name);
+
+            fs.writeFileSync(tileHtmlPath, tile.html, 'utf8');
+
+            runChrome(chromeBin, [
+                '--headless=new',
+                '--no-sandbox',
+                '--disable-gpu',
+                '--no-first-run',
+                '--hide-scrollbars',
+                `--user-data-dir=${profileDir}`,
+                '--allow-file-access-from-files',
+                '--force-device-scale-factor=1',
+                `--window-size=${tile.width},${tile.height}`,
+                '--virtual-time-budget=1500',
+                `--screenshot=${outPath}`,
+                tileFileUrl,
+            ]);
+
+            console.log(`Updated assets/${tile.name} (${tile.width}x${tile.height}px)`);
         }
     } finally {
         fs.rmSync(tmpDir, { recursive: true, force: true });
