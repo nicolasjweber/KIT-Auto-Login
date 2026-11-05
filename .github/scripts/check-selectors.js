@@ -16,7 +16,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { chromium } = require('playwright');
+const { chromium } = require('playwright-core');
 
 const USER_AGENT =
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 KIT-Auto-Login-HealthCheck/1.0 (+https://github.com/nicolasjweber/KIT-Auto-Login)';
@@ -277,7 +277,7 @@ async function tryFollowToAuthProvider(page, selector, idpState) {
 
 async function main() {
     const sites = loadSitesConfig();
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({ channel: 'chrome', headless: true });
 
     const idpState = {
         idpVerified: false,
