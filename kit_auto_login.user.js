@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        KIT Auto-Login
-// @version     2026.11.1
+// @version     2026.11.2
 // @description Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).
 // @author      nicolasjweber
 // @homepageURL https://github.com/nicolasjweber/KIT-Auto-Login
