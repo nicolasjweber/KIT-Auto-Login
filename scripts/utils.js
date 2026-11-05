@@ -277,41 +277,20 @@ function startSite(site, siteKey) {
  */
 async function getSettingsFromStorage(keys) {
     const api = typeof browser !== 'undefined' ? browser : (typeof chrome !== 'undefined' ? chrome : null);
-    const storageObj = api && api.storage;
-    if (!storageObj) return {};
-
-    const primary = storageObj.sync || storageObj.local;
-    const fallback = storageObj.local;
+    const storageObj = api?.storage;
+    const primary = storageObj?.sync || storageObj?.local;
+    const fallback = storageObj?.local;
     if (!primary) return {};
 
-    const readArea = (area, k) => new Promise((resolve) => {
-        try {
-            const res = area.get(k);
-            if (res && typeof res.then === 'function') {
-                res.then(resolve).catch(() => resolve({}));
-            } else {
-                area.get(k, (data) => resolve(data || {}));
-            }
-        } catch (e) {
-            resolve({});
-        }
-    });
-
-    const syncData = await readArea(primary, keys);
-    const hasAnyKey = keys.some((k) => syncData && Object.prototype.hasOwnProperty.call(syncData, k));
-    if (hasAnyKey || !fallback || fallback === primary) {
-        return syncData || {};
+    const syncData = (await primary.get(keys)) || {};
+    if (keys.some((k) => k in syncData) || !fallback || fallback === primary) {
+        return syncData;
     }
 
     // One-time migration from storage.local -> storage.sync
-    const localData = await readArea(fallback, keys);
-    const hasLocalKey = keys.some((k) => localData && Object.prototype.hasOwnProperty.call(localData, k));
-    if (hasLocalKey) {
-        try {
-            primary.set(localData);
-        } catch (e) {
-            // Ignore write errors during migration
-        }
+    const localData = (await fallback.get(keys)) || {};
+    if (keys.some((k) => k in localData)) {
+        await primary.set(localData);
         return localData;
     }
 
@@ -325,12 +304,8 @@ async function getSettingsFromStorage(keys) {
  */
 async function shouldRun(siteKey) {
     try {
-        const result = await getSettingsFromStorage(['siteSettings']);
-        const settings = (result && result.siteSettings) ? result.siteSettings : {};
-        if (Object.prototype.hasOwnProperty.call(settings, siteKey)) {
-            return !!settings[siteKey];
-        }
-        return true;
+        const { siteSettings = {} } = await getSettingsFromStorage(['siteSettings']);
+        return siteKey in siteSettings ? !!siteSettings[siteKey] : true;
     } catch (e) {
         console.error(e);
         return true;

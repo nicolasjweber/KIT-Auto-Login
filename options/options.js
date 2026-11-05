@@ -6,10 +6,7 @@ const sortOrderStorageKey = 'siteSortOrder';
 const defaultSiteOrder = Object.keys(sites);
 
 // Default settings (all enabled)
-const defaultSettings = {};
-Object.keys(sites).forEach((key) => {
-  defaultSettings[key] = true;
-});
+const defaultSettings = Object.fromEntries(Object.keys(sites).map((key) => [key, true]));
 
 function getApi() {
   return typeof browser !== 'undefined' ? browser : chrome;
@@ -17,45 +14,7 @@ function getApi() {
 
 function getSyncStorage() {
   const api = getApi();
-  return (api.storage && (api.storage.sync || api.storage.local)) || null;
-}
-
-function storageGet(area, keys) {
-  return new Promise((resolve) => {
-    if (!area) {
-      resolve({});
-      return;
-    }
-    try {
-      const res = area.get(keys);
-      if (res && typeof res.then === 'function') {
-        res.then((data) => resolve(data || {})).catch(() => resolve({}));
-      } else {
-        area.get(keys, (data) => resolve(data || {}));
-      }
-    } catch (e) {
-      resolve({});
-    }
-  });
-}
-
-function storageSet(area, data) {
-  return new Promise((resolve) => {
-    if (!area) {
-      resolve();
-      return;
-    }
-    try {
-      const res = area.set(data);
-      if (res && typeof res.then === 'function') {
-        res.then(resolve).catch(resolve);
-      } else {
-        area.set(data, () => resolve());
-      }
-    } catch (e) {
-      resolve();
-    }
-  });
+  return api.storage.sync || api.storage.local;
 }
 
 /**
@@ -64,18 +23,16 @@ function storageSet(area, data) {
 async function readSettings(keys) {
   const api = getApi();
   const syncArea = getSyncStorage();
-  const localArea = api.storage && api.storage.local;
+  const localArea = api.storage.local;
 
-  const syncData = await storageGet(syncArea, keys);
-  const hasSync = keys.some((k) => syncData && Object.prototype.hasOwnProperty.call(syncData, k));
-  if (hasSync || !localArea || localArea === syncArea) {
-    return syncData || {};
+  const syncData = (await syncArea.get(keys)) || {};
+  if (keys.some((k) => k in syncData) || !localArea || localArea === syncArea) {
+    return syncData;
   }
 
-  const localData = await storageGet(localArea, keys);
-  const hasLocal = keys.some((k) => localData && Object.prototype.hasOwnProperty.call(localData, k));
-  if (hasLocal) {
-    await storageSet(syncArea, localData);
+  const localData = (await localArea.get(keys)) || {};
+  if (keys.some((k) => k in localData)) {
+    await syncArea.set(localData);
     return localData;
   }
 
@@ -101,13 +58,12 @@ function getSortedSiteEntries(sortOrder) {
 }
 
 async function saveSortOrder(sortOrder) {
-  const storage = getSyncStorage();
-  await storageSet(storage, { [sortOrderStorageKey]: sortOrder });
+  await getSyncStorage().set({ [sortOrderStorageKey]: sortOrder });
 }
 
 async function loadSortOrder() {
   const res = await readSettings([sortOrderStorageKey]);
-  return (res && res[sortOrderStorageKey]) ? res[sortOrderStorageKey] : defaultSortOrder;
+  return res[sortOrderStorageKey] || defaultSortOrder;
 }
 
 async function saveOptions() {
@@ -119,8 +75,7 @@ async function saveOptions() {
     }
   }
 
-  const storage = getSyncStorage();
-  await storageSet(storage, { siteSettings: settings });
+  await getSyncStorage().set({ siteSettings: settings });
   showStatus();
   await refreshSitePermissionsUI();
 }
@@ -150,8 +105,7 @@ function getSiteOrigins(siteInfo) {
 }
 
 function getAllOrigins() {
-  const api = getApi();
-  const manifest = api.runtime.getManifest();
+  const manifest = getApi().runtime.getManifest();
   const origins = new Set();
   for (const cs of manifest.content_scripts || []) {
     for (const match of cs.matches || []) {
@@ -161,52 +115,18 @@ function getAllOrigins() {
   return Array.from(origins);
 }
 
-function hasHostPermission(origins) {
-  const api = getApi();
-  if (!api.permissions || typeof api.permissions.contains !== 'function') {
-    return Promise.resolve(true);
-  }
-  return new Promise((resolve) => {
-    try {
-      const res = api.permissions.contains({ origins });
-      if (res && typeof res.then === 'function') {
-        res.then((granted) => resolve(!!granted)).catch(() => resolve(true));
-      } else {
-        api.permissions.contains({ origins }, (granted) => resolve(!!granted));
-      }
-    } catch (e) {
-      resolve(true);
-    }
-  });
-}
-
 function isOnboardingMode() {
-  try {
-    return new URLSearchParams(window.location.search).get('onboarding') === '1';
-  } catch (e) {
-    return false;
-  }
+  return new URLSearchParams(window.location.search).get('onboarding') === '1';
 }
 
 function requestOriginsPermission(origins) {
-  const api = getApi();
-  if (!api.permissions || typeof api.permissions.request !== 'function') return;
+  getApi().permissions.request({ origins })
+    .then(() => refreshSitePermissionsUI())
+    .catch((err) => console.error('Permission request failed:', err));
 
-  try {
-    const res = api.permissions.request({ origins });
-    if (res && typeof res.then === 'function') {
-      res.then(() => {
-        refreshSitePermissionsUI();
-      }).catch((err) => {
-        console.error('Permission request failed:', err);
-      });
-    }
-    // When running inside the toolbar popup, close it so the browser's permission prompt is visible behind it
-    if (!isOnboardingMode()) {
-      window.close();
-    }
-  } catch (e) {
-    console.error('Permission request failed:', e);
+  // When running inside the toolbar popup, close it so the browser's permission prompt is visible behind it
+  if (!isOnboardingMode()) {
+    window.close();
   }
 }
 
@@ -215,14 +135,14 @@ function requestOriginsPermission(origins) {
  * and the first-install onboarding card.
  */
 async function refreshSitePermissionsUI() {
+  const api = getApi();
   let anyMissing = false;
 
   for (const [key, siteInfo] of Object.entries(sites)) {
     const card = document.querySelector(`.option-card[data-site-key="${key}"]`);
     if (!card) continue;
 
-    const origins = getSiteOrigins(siteInfo);
-    const granted = await hasHostPermission(origins);
+    const granted = await api.permissions.contains({ origins: getSiteOrigins(siteInfo) });
     if (!granted) {
       anyMissing = true;
     }
@@ -236,11 +156,7 @@ async function refreshSitePermissionsUI() {
 
   const onboardingCard = document.getElementById('onboarding-card');
   if (onboardingCard) {
-    if (isOnboardingMode() && anyMissing) {
-      onboardingCard.style.display = 'flex';
-    } else {
-      onboardingCard.style.display = 'none';
-    }
+    onboardingCard.style.display = (isOnboardingMode() && anyMissing) ? 'flex' : 'none';
   }
 }
 
@@ -253,13 +169,10 @@ async function restoreOptions() {
     sortSelect.value = currentSortOrder;
   }
 
-  const res = await readSettings(['siteSettings']);
-  const settings = (res && res.siteSettings) ? res.siteSettings : defaultSettings;
+  const { siteSettings = defaultSettings } = await readSettings(['siteSettings']);
   const sortedSites = getSortedSiteEntries(currentSortOrder);
 
-  while (container.firstChild) {
-    container.removeChild(container.firstChild);
-  }
+  container.replaceChildren();
 
   for (const [key, siteInfo] of sortedSites) {
     const div = document.createElement('div');
@@ -306,7 +219,7 @@ async function restoreOptions() {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.id = key;
-    checkbox.checked = Object.prototype.hasOwnProperty.call(settings, key) ? settings[key] : true;
+    checkbox.checked = key in siteSettings ? siteSettings[key] : true;
     checkbox.addEventListener('change', saveOptions);
 
     // Slider span
@@ -328,11 +241,7 @@ async function restoreOptions() {
 }
 
 function applyDarkMode(isDark) {
-  if (isDark) {
-    document.body.classList.add('dark-mode');
-  } else {
-    document.body.classList.remove('dark-mode');
-  }
+  document.body.classList.toggle('dark-mode', isDark);
 }
 
 function syncWithBrowserTheme() {
@@ -340,12 +249,7 @@ function syncWithBrowserTheme() {
 
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   applyDarkMode(mediaQuery.matches);
-
-  if (typeof mediaQuery.addEventListener === 'function') {
-    mediaQuery.addEventListener('change', (event) => applyDarkMode(event.matches));
-  } else if (typeof mediaQuery.addListener === 'function') {
-    mediaQuery.addListener((event) => applyDarkMode(event.matches));
-  }
+  mediaQuery.addEventListener('change', (event) => applyDarkMode(event.matches));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -357,17 +261,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const verEl = document.getElementById('version');
   if (verEl) verEl.textContent = `v${manifest.version}`;
 
-  const btnEnable = document.getElementById('enable-all');
-  if (btnEnable) btnEnable.addEventListener('click', enableAll);
-  const btnDisable = document.getElementById('disable-all');
-  if (btnDisable) btnDisable.addEventListener('click', disableAll);
-
-  const btnGrantAll = document.getElementById('grant-all-permissions');
-  if (btnGrantAll) {
-    btnGrantAll.addEventListener('click', () => {
-      requestOriginsPermission(getAllOrigins());
-    });
-  }
+  document.getElementById('enable-all')?.addEventListener('click', enableAll);
+  document.getElementById('disable-all')?.addEventListener('click', disableAll);
+  document.getElementById('grant-all-permissions')?.addEventListener('click', () => {
+    requestOriginsPermission(getAllOrigins());
+  });
 
   const sortSelect = document.getElementById('sort-order');
   if (sortSelect) {
@@ -377,10 +275,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (api.permissions && api.permissions.onAdded) {
-    api.permissions.onAdded.addListener(() => refreshSitePermissionsUI());
-  }
-  if (api.permissions && api.permissions.onRemoved) {
-    api.permissions.onRemoved.addListener(() => refreshSitePermissionsUI());
-  }
+  api.permissions.onAdded.addListener(() => refreshSitePermissionsUI());
+  api.permissions.onRemoved.addListener(() => refreshSitePermissionsUI());
 });

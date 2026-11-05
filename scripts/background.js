@@ -21,58 +21,20 @@ const BADGE_COLOR_WARNING = '#f59e0b'; // Amber warning
 
 // --- Storage helpers (sync with local fallback + session for tab state) ------
 
-function storageGet(area, keys) {
-    return new Promise((resolve) => {
-        if (!area) {
-            resolve({});
-            return;
-        }
-        try {
-            const res = area.get(keys);
-            if (res && typeof res.then === 'function') {
-                res.then((data) => resolve(data || {})).catch(() => resolve({}));
-            } else {
-                area.get(keys, (data) => resolve(data || {}));
-            }
-        } catch (e) {
-            resolve({});
-        }
-    });
-}
-
-function storageSet(area, data) {
-    return new Promise((resolve) => {
-        if (!area) {
-            resolve();
-            return;
-        }
-        try {
-            const res = area.set(data);
-            if (res && typeof res.then === 'function') {
-                res.then(resolve).catch(resolve);
-            } else {
-                area.set(data, () => resolve());
-            }
-        } catch (e) {
-            resolve();
-        }
-    });
-}
-
 async function getSiteSettings() {
-    const syncArea = api.storage && (api.storage.sync || api.storage.local);
-    const localArea = api.storage && api.storage.local;
+    const syncArea = api.storage.sync || api.storage.local;
+    const localArea = api.storage.local;
     const keys = ['siteSettings', 'siteSortOrder'];
 
-    const syncData = await storageGet(syncArea, keys);
-    if (syncData && (syncData.siteSettings || syncData.siteSortOrder)) {
+    const syncData = (await syncArea.get(keys)) || {};
+    if (syncData.siteSettings || syncData.siteSortOrder) {
         return syncData.siteSettings || {};
     }
 
     if (localArea && localArea !== syncArea) {
-        const localData = await storageGet(localArea, keys);
-        if (localData && (localData.siteSettings || localData.siteSortOrder)) {
-            await storageSet(syncArea, localData);
+        const localData = (await localArea.get(keys)) || {};
+        if (localData.siteSettings || localData.siteSortOrder) {
+            await syncArea.set(localData);
             return localData.siteSettings || {};
         }
     }
@@ -80,18 +42,16 @@ async function getSiteSettings() {
 }
 
 function getSessionArea() {
-    return (api.storage && (api.storage.session || api.storage.local)) || null;
+    return api.storage.session || api.storage.local;
 }
 
 async function getTriggeredTabs() {
-    const area = getSessionArea();
-    const data = await storageGet(area, [TAB_TRIGGERED_STORAGE_KEY]);
-    return (data && data[TAB_TRIGGERED_STORAGE_KEY]) || {};
+    const data = await getSessionArea().get([TAB_TRIGGERED_STORAGE_KEY]);
+    return data?.[TAB_TRIGGERED_STORAGE_KEY] || {};
 }
 
 async function markTabTriggered(tabId, siteKey) {
     if (typeof tabId !== 'number') return;
-    const area = getSessionArea();
     const map = await getTriggeredTabs();
     const prev = map[tabId] || { count: 0 };
     map[tabId] = {
@@ -99,16 +59,15 @@ async function markTabTriggered(tabId, siteKey) {
         siteKey: siteKey || prev.siteKey || '',
         updatedAt: Date.now(),
     };
-    await storageSet(area, { [TAB_TRIGGERED_STORAGE_KEY]: map });
+    await getSessionArea().set({ [TAB_TRIGGERED_STORAGE_KEY]: map });
 }
 
 async function clearTabTriggered(tabId) {
     if (typeof tabId !== 'number') return;
-    const area = getSessionArea();
     const map = await getTriggeredTabs();
-    if (Object.prototype.hasOwnProperty.call(map, tabId)) {
+    if (tabId in map) {
         delete map[tabId];
-        await storageSet(area, { [TAB_TRIGGERED_STORAGE_KEY]: map });
+        await getSessionArea().set({ [TAB_TRIGGERED_STORAGE_KEY]: map });
     }
 }
 
@@ -129,25 +88,6 @@ function getSiteOrigins(site) {
     return (site.hosts || []).map((host) => `https://${host}/*`);
 }
 
-function permissionsContains(origins) {
-    return new Promise((resolve) => {
-        if (!api.permissions || typeof api.permissions.contains !== 'function') {
-            resolve(true);
-            return;
-        }
-        try {
-            const res = api.permissions.contains({ origins });
-            if (res && typeof res.then === 'function') {
-                res.then((granted) => resolve(!!granted)).catch(() => resolve(true));
-            } else {
-                api.permissions.contains({ origins }, (granted) => resolve(!!granted));
-            }
-        } catch (e) {
-            resolve(true);
-        }
-    });
-}
-
 function findSiteByUrl(url) {
     if (!url) return null;
     try {
@@ -165,7 +105,6 @@ function findSiteByUrl(url) {
 // --- Toolbar badge management ------------------------------------------------
 
 async function setBadge(tabId, text, color, title) {
-    if (!api.action) return;
     try {
         await api.action.setBadgeText({ tabId, text });
         if (text && color) {
@@ -174,12 +113,10 @@ async function setBadge(tabId, text, color, title) {
                 await api.action.setBadgeTextColor({ tabId, color: '#ffffff' });
             }
         }
-        if (typeof api.action.setTitle === 'function') {
-            await api.action.setTitle({
-                tabId,
-                title: title || 'KIT Auto-Login',
-            });
-        }
+        await api.action.setTitle({
+            tabId,
+            title: title || 'KIT Auto-Login',
+        });
     } catch (e) {
         // Tab may have closed before badge update completed
     }
@@ -189,10 +126,10 @@ async function updateBadgeForTab(tabId, url) {
     if (typeof tabId !== 'number') return;
 
     let tabUrl = url;
-    if (!tabUrl && api.tabs && typeof api.tabs.get === 'function') {
+    if (!tabUrl) {
         try {
             const tab = await api.tabs.get(tabId);
-            tabUrl = tab && tab.url;
+            tabUrl = tab?.url;
         } catch (e) {
             return;
         }
@@ -204,13 +141,10 @@ async function updateBadgeForTab(tabId, url) {
 
     if (match) {
         const settings = await getSiteSettings();
-        const enabled = Object.prototype.hasOwnProperty.call(settings, match.siteKey)
-            ? !!settings[match.siteKey]
-            : true;
+        const enabled = match.siteKey in settings ? !!settings[match.siteKey] : true;
 
         if (enabled) {
-            const origins = getSiteOrigins(match.site);
-            const hasPerm = await permissionsContains(origins);
+            const hasPerm = await api.permissions.contains({ origins: getSiteOrigins(match.site) });
             if (!hasPerm) {
                 await setBadge(
                     tabId,
@@ -237,7 +171,6 @@ async function updateBadgeForTab(tabId, url) {
 }
 
 async function refreshActiveTabsBadges() {
-    if (!api.tabs || typeof api.tabs.query !== 'function') return;
     try {
         const tabs = await api.tabs.query({ active: true });
         for (const tab of tabs || []) {
@@ -256,10 +189,9 @@ api.runtime.onInstalled.addListener(async (details) => {
     // Ensure any existing local settings are migrated to sync storage
     await getSiteSettings();
 
-    if (details && details.reason === 'install') {
-        const origins = getAllOrigins();
-        const allGranted = await permissionsContains(origins);
-        if (!allGranted && api.tabs && typeof api.tabs.create === 'function') {
+    if (details?.reason === 'install') {
+        const allGranted = await api.permissions.contains({ origins: getAllOrigins() });
+        if (!allGranted) {
             const url = api.runtime.getURL('options/options.html?onboarding=1');
             await api.tabs.create({ url });
         }
@@ -267,10 +199,10 @@ api.runtime.onInstalled.addListener(async (details) => {
 });
 
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (!message || message.type !== 'kit-auto-login:triggered') return false;
+    if (message?.type !== 'kit-auto-login:triggered') return false;
 
     (async () => {
-        const tabId = sender && sender.tab && sender.tab.id;
+        const tabId = sender?.tab?.id;
         if (typeof tabId === 'number') {
             await markTabTriggered(tabId, message.siteKey);
             await updateBadgeForTab(tabId, sender.tab.url);
@@ -280,38 +212,22 @@ api.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
 });
 
-if (api.tabs) {
-    api.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-        if (changeInfo.status === 'complete' || changeInfo.url) {
-            await updateBadgeForTab(tabId, changeInfo.url || (tab && tab.url));
-        }
-    });
+api.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' || changeInfo.url) {
+        await updateBadgeForTab(tabId, changeInfo.url || tab?.url);
+    }
+});
 
-    api.tabs.onActivated.addListener(async (activeInfo) => {
-        if (activeInfo && typeof activeInfo.tabId === 'number') {
-            await updateBadgeForTab(activeInfo.tabId);
-        }
-    });
+api.tabs.onActivated.addListener(async (activeInfo) => {
+    if (typeof activeInfo?.tabId === 'number') {
+        await updateBadgeForTab(activeInfo.tabId);
+    }
+});
 
-    api.tabs.onRemoved.addListener(async (tabId) => {
-        await clearTabTriggered(tabId);
-    });
-}
+api.tabs.onRemoved.addListener(async (tabId) => {
+    await clearTabTriggered(tabId);
+});
 
-if (api.permissions && api.permissions.onAdded) {
-    api.permissions.onAdded.addListener(() => {
-        refreshActiveTabsBadges();
-    });
-}
-
-if (api.permissions && api.permissions.onRemoved) {
-    api.permissions.onRemoved.addListener(() => {
-        refreshActiveTabsBadges();
-    });
-}
-
-if (api.storage && api.storage.onChanged) {
-    api.storage.onChanged.addListener(() => {
-        refreshActiveTabsBadges();
-    });
-}
+api.permissions.onAdded.addListener(() => refreshActiveTabsBadges());
+api.permissions.onRemoved.addListener(() => refreshActiveTabsBadges());
+api.storage.onChanged.addListener(() => refreshActiveTabsBadges());
