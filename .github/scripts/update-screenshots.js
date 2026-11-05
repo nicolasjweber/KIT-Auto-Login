@@ -1,9 +1,9 @@
 /**
- * Automatically generates `assets/screenshot_light.png` and `assets/screenshot_dark.png`
- * from `options/options.html` + `options/options.js` + `scripts/sites.js` using headless Chrome.
+ * Automatically generates:
+ *   - `assets/screenshot_light.png` & `assets/screenshot_dark.png` (tall README / AMO screenshots)
+ *   - `assets/screenshot_cws_light.png` & `assets/screenshot_cws_dark.png` (1280x800 Chrome Web Store promo screenshots)
  *
- * Works with zero npm dependencies by driving a local Chrome/Chromium installation
- * (`--headless=new --screenshot --force-device-scale-factor=2`).
+ * Works with zero npm dependencies by driving a local Chrome/Chromium installation.
  *
  * Usage:
  *   node .github/scripts/update-screenshots.js
@@ -35,11 +35,13 @@ function findChromeBinary() {
     throw new Error('Could not find Chrome/Chromium binary. Set CHROME_PATH environment variable.');
 }
 
-function buildRenderHtml(isDark) {
+function buildRenderHtml(isDark, extraCss = '', activeTabUrl = '') {
     const optionsHtml = fs.readFileSync(path.join(repoRoot, 'options', 'options.html'), 'utf8');
     const sitesUrl = 'file:///' + path.join(repoRoot, 'scripts', 'sites.js').replace(/\\/g, '/');
     const optionsJsUrl = 'file:///' + path.join(repoRoot, 'options', 'options.js').replace(/\\/g, '/');
     const iconsBaseUrl = 'file:///' + path.join(repoRoot, 'icons', 'sites').replace(/\\/g, '/');
+
+    const tabsResult = activeTabUrl ? JSON.stringify([{ id: 1, url: activeTabUrl }]) : '[]';
 
     const mockScript = `
 <script>
@@ -68,7 +70,7 @@ function buildRenderHtml(isDark) {
       onRemoved: { addListener: () => {} },
     },
     tabs: {
-      query: () => Promise.resolve([]),
+      query: () => Promise.resolve(${tabsResult}),
       onActivated: { addListener: () => {} },
       onUpdated: { addListener: () => {} },
     },
@@ -76,7 +78,10 @@ function buildRenderHtml(isDark) {
 </script>`;
 
     return optionsHtml
-        .replace('<head>', `<head>${mockScript}<style>html, body { scrollbar-width: none; } ::-webkit-scrollbar { display: none; }</style>`)
+        .replace(
+            '<head>',
+            `<head>${mockScript}<style>html, body { scrollbar-width: none; } ::-webkit-scrollbar { display: none; } ${extraCss}</style>`
+        )
         .replace('../scripts/sites.js', sitesUrl)
         .replace(
             '<script src="options.js"></script>',
@@ -93,6 +98,141 @@ function buildRenderHtml(isDark) {
         );
 }
 
+function buildChromeWebStoreHtml(isDark, lightPopupFileUrl, darkPopupFileUrl) {
+    const iconSvgUrl = 'file:///' + path.join(repoRoot, 'icons', 'icon.svg').replace(/\\/g, '/');
+    const primaryPopupUrl = isDark ? darkPopupFileUrl : lightPopupFileUrl;
+    const secondaryPopupUrl = isDark ? lightPopupFileUrl : darkPopupFileUrl;
+
+    const bg = isDark ? '#16181a' : '#f1f3f5';
+    const textColor = isDark ? '#f1f3f5' : '#18181b';
+    const subColor = isDark ? '#a1a1aa' : '#52525b';
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1280px;
+    height: 800px;
+    overflow: hidden;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: ${bg};
+    color: ${textColor};
+  }
+  .canvas {
+    width: 1280px;
+    height: 800px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 76px;
+    gap: 48px;
+  }
+  .left {
+    flex: 0 0 430px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .brand img {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, ${isDark ? '0.35' : '0.08'});
+  }
+  h1 {
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  h1 span {
+    color: #009682;
+  }
+  .subtitle {
+    font-size: 20px;
+    line-height: 1.55;
+    color: ${subColor};
+    font-weight: 400;
+  }
+  .right {
+    position: relative;
+    flex: 1;
+    height: 700px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .popup-frame {
+    width: 440px;
+    height: 680px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)'};
+    box-shadow: 0 18px 44px rgba(0, 0, 0, ${isDark ? '0.5' : '0.12'});
+    position: relative;
+  }
+  .popup-frame.primary {
+    z-index: 2;
+    transform: translate(-55px, 0);
+    background: ${isDark ? '#121212' : '#f8f9fa'};
+  }
+  .popup-frame.secondary {
+    position: absolute;
+    right: 0;
+    top: 32px;
+    width: 390px;
+    height: 620px;
+    z-index: 1;
+    opacity: 0.92;
+    transform: translate(15px, 10px) scale(0.94);
+    background: ${isDark ? '#f8f9fa' : '#121212'};
+  }
+  iframe {
+    width: 500px;
+    height: 775px;
+    border: none;
+    transform: scale(0.88);
+    transform-origin: top left;
+    pointer-events: none;
+  }
+  .popup-frame.secondary iframe {
+    height: 800px;
+    transform: scale(0.78);
+  }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="left">
+      <div class="brand">
+        <img src="${iconSvgUrl}" alt="KIT Auto-Login">
+        <h1>KIT <span>Auto-Login</span></h1>
+      </div>
+      <p class="subtitle">
+        Zero-click login for KIT services. Automatically clicks through the login pages for ILIAS, Campus Management, GitLab, WiWi Portal, and other portals.
+      </p>
+    </div>
+    <div class="right">
+      <div class="popup-frame primary">
+        <iframe src="${primaryPopupUrl}"></iframe>
+      </div>
+      <div class="popup-frame secondary">
+        <iframe src="${secondaryPopupUrl}"></iframe>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
 function runChrome(chromeBin, args) {
     execFileSync(chromeBin, args, { stdio: 'ignore' });
 }
@@ -103,8 +243,6 @@ function main() {
     const profileDir = path.join(tmpDir, 'profile');
 
     try {
-        // Compute exact height from the number of sites (header + toolbar + 18 cards + footer)
-        // First measure actual document.body.scrollHeight via --dump-dom
         const probeHtmlPath = path.join(tmpDir, 'probe.html');
         const probeFileUrl = 'file:///' + probeHtmlPath.replace(/\\/g, '/');
         const probeHtml = buildRenderHtml(false).replace(
@@ -134,6 +272,7 @@ function main() {
         const cssHeight = heightMatch ? parseInt(heightMatch[1], 10) : 1480;
         const cssWidth = 500;
 
+        // 1. Tall README / AMO screenshots (1000x3014)
         for (const mode of ['light', 'dark']) {
             const isDark = mode === 'dark';
             const htmlPath = path.join(tmpDir, `options_${mode}.html`);
@@ -158,6 +297,45 @@ function main() {
             ]);
 
             console.log(`Updated assets/screenshot_${mode}.png (${cssWidth * 2}x${cssHeight * 2}px)`);
+        }
+
+        // 2. Chrome Web Store 1280x800 landscape screenshots
+        const cwsPopupLightPath = path.join(tmpDir, 'cws_popup_light.html');
+        const cwsPopupDarkPath = path.join(tmpDir, 'cws_popup_dark.html');
+        fs.writeFileSync(cwsPopupLightPath, buildRenderHtml(false, '', 'https://ilias.studium.kit.edu/'), 'utf8');
+        fs.writeFileSync(cwsPopupDarkPath, buildRenderHtml(true, '', 'https://ilias.studium.kit.edu/'), 'utf8');
+
+        const lightPopupFileUrl = 'file:///' + cwsPopupLightPath.replace(/\\/g, '/');
+        const darkPopupFileUrl = 'file:///' + cwsPopupDarkPath.replace(/\\/g, '/');
+
+        for (const mode of ['light', 'dark']) {
+            const isDark = mode === 'dark';
+            const cwsHtmlPath = path.join(tmpDir, `cws_${mode}.html`);
+            const cwsFileUrl = 'file:///' + cwsHtmlPath.replace(/\\/g, '/');
+            const outPath = path.join(repoRoot, 'assets', `screenshot_cws_${mode}.png`);
+
+            fs.writeFileSync(
+                cwsHtmlPath,
+                buildChromeWebStoreHtml(isDark, lightPopupFileUrl, darkPopupFileUrl),
+                'utf8'
+            );
+
+            runChrome(chromeBin, [
+                '--headless=new',
+                '--no-sandbox',
+                '--disable-gpu',
+                '--no-first-run',
+                '--hide-scrollbars',
+                `--user-data-dir=${profileDir}`,
+                '--allow-file-access-from-files',
+                '--force-device-scale-factor=1',
+                '--window-size=1280,800',
+                '--virtual-time-budget=1500',
+                `--screenshot=${outPath}`,
+                cwsFileUrl,
+            ]);
+
+            console.log(`Updated assets/screenshot_cws_${mode}.png (1280x800px)`);
         }
     } finally {
         fs.rmSync(tmpDir, { recursive: true, force: true });
