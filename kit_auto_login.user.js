@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        KIT Auto-Login
-// @version     2026.11.2
+// @version     2026.11.3
 // @description Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).
 // @author      nicolasjweber
 // @homepageURL https://github.com/nicolasjweber/KIT-Auto-Login
@@ -499,22 +499,109 @@
     const IDP_MAX_ATTEMPTS = 2;
     const IDP_ATTEMPT_WINDOW_MS = 2 * 60 * 1000;
     const IDP_ATTEMPTS_KEY = "kitAutoLogin.idpAttempts";
+    const IDP_OTP_ATTEMPTS_KEY = "kitAutoLogin.idpOtpAttempts";
+    const IDP_LAST_OTP_KEY = "kitAutoLogin.lastOtpCode";
 
-    function getRecentIdpAttempts() {
+    function getRecentIdpAttempts(storageKey = IDP_ATTEMPTS_KEY) {
         try {
-            const stored = JSON.parse(sessionStorage.getItem(IDP_ATTEMPTS_KEY) || "[]");
+            const stored = JSON.parse(sessionStorage.getItem(storageKey) || "[]");
             return stored.filter((time) => Date.now() - time < IDP_ATTEMPT_WINDOW_MS);
         } catch (e) {
             return [];
         }
     }
 
+    function recordIdpAttempt(storageKey = IDP_ATTEMPTS_KEY) {
+        const attempts = getRecentIdpAttempts(storageKey);
+        attempts.push(Date.now());
+        try {
+            sessionStorage.setItem(storageKey, JSON.stringify(attempts));
+        } catch (e) {
+            // Storage unavailable; ignore
+        }
+    }
+
+    function getLastSubmittedOtp() {
+        try {
+            return sessionStorage.getItem(IDP_LAST_OTP_KEY) || "";
+        } catch (e) {
+            return "";
+        }
+    }
+
+    function setLastSubmittedOtp(code) {
+        try {
+            sessionStorage.setItem(IDP_LAST_OTP_KEY, code);
+        } catch (e) {
+            // Ignore storage errors
+        }
+    }
+
     /**
-     * Submits the IdP login form once the password manager has filled it.
+     * Handles the optional 2FA TOTP step on the IdP (`input[name="fudis_otp_input"]`).
+     * Gives up after IDP_MAX_ATTEMPTS automatic submits within a short window (per tab)
+     * and never re-submits the exact same 6-digit code, preventing account lockouts.
+     * Note: KIT's HTML has a malformed `class="form-element id=" fudis_otp_input"` attribute,
+     * so the input must be matched by `name="fudis_otp_input"`.
+     */
+    function runIdpOtpStep(otpInput, siteKey = "idp") {
+        if (getRecentIdpAttempts(IDP_OTP_ATTEMPTS_KEY).length >= IDP_MAX_ATTEMPTS) {
+            console.warn("KIT Auto-Login: Automatic 2FA login failed repeatedly, please enter the token code manually.");
+            return;
+        }
+
+        let submitted = false;
+
+        function submitWithCode(code) {
+            if (submitted) return false;
+            if (getRecentIdpAttempts(IDP_OTP_ATTEMPTS_KEY).length >= IDP_MAX_ATTEMPTS) return false;
+            const clean = (code || "").trim();
+            if (!/^\d{6}$/.test(clean)) return false;
+            if (clean === getLastSubmittedOtp()) return false;
+
+            const submit = document.querySelector('button[name="_eventId_proceed"]');
+            if (!submit || isDisabled(submit)) return false;
+
+            submitted = true;
+            setLastSubmittedOtp(clean);
+            recordIdpAttempt(IDP_OTP_ATTEMPTS_KEY);
+
+            if (otpInput.value !== clean) {
+                otpInput.value = clean;
+                otpInput.dispatchEvent(new Event("input", { bubbles: true }));
+                otpInput.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+
+            notifyAutoLogin(siteKey);
+            submit.click();
+            return true;
+        }
+
+        if (typeof startIdpOtpClipboardFlow === "function") {
+            startIdpOtpClipboardFlow(otpInput, submitWithCode, getLastSubmittedOtp);
+        } else if (!submitWithCode(otpInput.value)) {
+            const onInput = () => {
+                if (submitWithCode(otpInput.value)) {
+                    otpInput.removeEventListener("input", onInput);
+                }
+            };
+            otpInput.addEventListener("input", onInput);
+        }
+    }
+
+    /**
+     * Submits the IdP login form once the password manager has filled it, and handles
+     * the subsequent 2FA TOTP page (`input[name="fudis_otp_input"]`) if 2FA is enabled.
      * Gives up after IDP_MAX_ATTEMPTS automatic submits within a short window
      * (per tab), so outdated stored credentials cannot cause an account lockout.
      */
     function runIdpLogin(site, siteKey = "idp") {
+        const otpInput = document.querySelector('input[name="fudis_otp_input"]');
+        if (otpInput) {
+            runIdpOtpStep(otpInput, siteKey);
+            return;
+        }
+
         const attempts = getRecentIdpAttempts();
         if (attempts.length >= IDP_MAX_ATTEMPTS) {
             console.warn("KIT Auto-Login: Automatic login failed repeatedly, please log in manually.");

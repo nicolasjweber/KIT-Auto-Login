@@ -4,6 +4,7 @@ const sites = KIT_SITES;
 const defaultSortOrder = 'default';
 const sortOrderStorageKey = 'siteSortOrder';
 const pausedUntilStorageKey = 'pausedUntil';
+const idpTotpClipboardStorageKey = 'idpTotpClipboard';
 const PAUSE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 const defaultSiteOrder = Object.keys(sites);
 let lastCurrentTabSiteKey = null;
@@ -286,10 +287,19 @@ async function restoreOptions() {
     sortSelect.value = currentSortOrder;
   }
 
-  const [{ siteSettings = defaultSettings }, currentTabSiteKey] = await Promise.all([
-    readSettings(['siteSettings']),
+  const [
+    { siteSettings = defaultSettings, [idpTotpClipboardStorageKey]: rawIdpTotpClipboard = false },
+    currentTabSiteKey,
+    hasClipboardPerm,
+  ] = await Promise.all([
+    readSettings(['siteSettings', idpTotpClipboardStorageKey]),
     getActiveTabSiteKey(),
+    getApi().permissions.contains({ permissions: ['clipboardRead'] }).catch(() => false),
   ]);
+  const idpTotpClipboard = Boolean(rawIdpTotpClipboard && hasClipboardPerm);
+  if (rawIdpTotpClipboard && !hasClipboardPerm) {
+    await getSyncStorage().set({ [idpTotpClipboardStorageKey]: false });
+  }
   lastCurrentTabSiteKey = currentTabSiteKey;
   const sortedSites = getSortedSiteEntries(currentSortOrder, currentTabSiteKey);
 
@@ -297,8 +307,13 @@ async function restoreOptions() {
 
   for (const [key, siteInfo] of sortedSites) {
     const isCurrentTabSite = key === currentTabSiteKey;
+    const hasSubOption = key === 'idp';
     const div = document.createElement('div');
-    div.className = isCurrentTabSite ? 'option-card current-site' : 'option-card';
+    div.className = [
+      'option-card',
+      isCurrentTabSite ? 'current-site' : '',
+      hasSubOption ? 'has-suboption' : '',
+    ].filter(Boolean).join(' ');
     div.dataset.siteKey = key;
 
     // Label
@@ -354,8 +369,63 @@ async function restoreOptions() {
     actionsEl.appendChild(permBtn);
     actionsEl.appendChild(switchLabel);
 
-    div.appendChild(labelEl);
-    div.appendChild(actionsEl);
+    if (hasSubOption) {
+      const mainRow = document.createElement('div');
+      mainRow.className = 'option-main-row';
+      mainRow.appendChild(labelEl);
+      mainRow.appendChild(actionsEl);
+      div.appendChild(mainRow);
+
+      const subRow = document.createElement('div');
+      subRow.className = 'option-sub-row';
+
+      const subLabel = document.createElement('label');
+      subLabel.className = 'option-sub-label';
+      subLabel.htmlFor = 'idp-totp-clipboard';
+      subLabel.textContent = 'Autofill 2FA code from clipboard';
+      subLabel.title = 'Automatically read 6-digit TOTP code from clipboard on the KIT IdP 2FA page and submit';
+
+      const subSwitch = document.createElement('label');
+      subSwitch.className = 'switch switch-sm';
+
+      const subCheckbox = document.createElement('input');
+      subCheckbox.type = 'checkbox';
+      subCheckbox.id = 'idp-totp-clipboard';
+      subCheckbox.checked = idpTotpClipboard;
+      subCheckbox.addEventListener('change', () => {
+        if (subCheckbox.checked) {
+          // Save optimistic state first in case the popup closes when showing the browser permission prompt
+          getSyncStorage().set({ [idpTotpClipboardStorageKey]: true });
+          getApi().permissions.request({ permissions: ['clipboardRead'] })
+            .then(async (granted) => {
+              subCheckbox.checked = !!granted;
+              await getSyncStorage().set({ [idpTotpClipboardStorageKey]: !!granted });
+              showStatus(granted ? '2FA from clipboard enabled' : 'Clipboard permission denied');
+            })
+            .catch(async (err) => {
+              console.error('Clipboard permission request failed:', err);
+              subCheckbox.checked = false;
+              await getSyncStorage().set({ [idpTotpClipboardStorageKey]: false });
+            });
+        } else {
+          getSyncStorage().set({ [idpTotpClipboardStorageKey]: false })
+            .then(() => showStatus());
+        }
+      });
+
+      const subSlider = document.createElement('span');
+      subSlider.className = 'slider';
+
+      subSwitch.appendChild(subCheckbox);
+      subSwitch.appendChild(subSlider);
+
+      subRow.appendChild(subLabel);
+      subRow.appendChild(subSwitch);
+      div.appendChild(subRow);
+    } else {
+      div.appendChild(labelEl);
+      div.appendChild(actionsEl);
+    }
     container.appendChild(div);
   }
 

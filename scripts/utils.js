@@ -273,6 +273,7 @@ function startSite(site, siteKey) {
 // --- Settings ---------------------------------------------------------------
 
 let kalPausedUntil = 0;
+let kalIdpTotpClipboard = false;
 
 function isAutoLoginPaused() {
     return kalPausedUntil > Date.now();
@@ -286,12 +287,135 @@ function isAutoLoginPaused() {
                 if (changes.pausedUntil) {
                     kalPausedUntil = Number(changes.pausedUntil.newValue) || 0;
                 }
+                if (changes.idpTotpClipboard) {
+                    kalIdpTotpClipboard = !!changes.idpTotpClipboard.newValue;
+                }
             });
         }
     } catch (e) {
         // Ignore in contexts without extension storage
     }
 })();
+
+/**
+ * Reads text from the clipboard when the optional `clipboardRead` permission is granted.
+ * Tries `navigator.clipboard.readText()`, background message fallback, and a temporary
+ * off-screen `<textarea>` with `document.execCommand('paste')` (whichever the browser supports),
+ * while preserving focus on `otpInput`.
+ */
+async function readClipboardForOtp(otpInput) {
+    // 1. Direct Async Clipboard API (supported in Firefox content scripts with clipboardRead)
+    try {
+        if (navigator.clipboard && typeof navigator.clipboard.readText === 'function') {
+            const text = await navigator.clipboard.readText();
+            if (typeof text === 'string' && text.trim()) {
+                return text.trim();
+            }
+        }
+    } catch (e) {
+        // Fall through to extension fallbacks
+    }
+
+    // 2. Ask background script to read clipboard (works in Firefox background context)
+    try {
+        const api = typeof browser !== 'undefined' ? browser : (typeof chrome !== 'undefined' ? chrome : null);
+        if (api?.runtime?.sendMessage) {
+            const res = await api.runtime.sendMessage({ type: 'kit-auto-login:read-clipboard' });
+            if (typeof res?.text === 'string' && res.text.trim()) {
+                return res.text.trim();
+            }
+        }
+    } catch (e) {
+        // Fall through to execCommand fallback
+    }
+
+    // 3. Content script `execCommand('paste')` fallback (supported in Chrome/Edge with clipboardRead)
+    try {
+        const ta = document.createElement('textarea');
+        ta.setAttribute('aria-hidden', 'true');
+        ta.tabIndex = -1;
+        ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
+        document.body.appendChild(ta);
+        ta.focus({ preventScroll: true });
+        const ok = document.execCommand('paste');
+        const val = ok ? ta.value : '';
+        ta.remove();
+        if (otpInput && typeof otpInput.focus === 'function') {
+            otpInput.focus({ preventScroll: true });
+        }
+        if (typeof val === 'string' && val.trim()) {
+            return val.trim();
+        }
+    } catch (e) {
+        // Ignore
+    }
+
+    return '';
+}
+
+/**
+ * Monitors `otpInput` on the KIT Shibboleth IdP 2FA page:
+ * - If the user or a password manager fills a 6-digit code directly into `otpInput`, submits immediately.
+ * - If the optional "2FA from clipboard" setting (`kalIdpTotpClipboard`) is enabled, polls the clipboard
+ *   for a 6-digit TOTP code (and re-checks on window focus) and fills + submits it automatically.
+ */
+function startIdpOtpClipboardFlow(otpInput, submitWithCode, getLastSubmittedOtp) {
+    let finished = false;
+
+    const trySubmit = (rawCode) => {
+        if (finished || isAutoLoginPaused()) return false;
+        const code = (rawCode || '').trim();
+        if (!/^\d{6}$/.test(code)) return false;
+        if (code === getLastSubmittedOtp()) return false;
+        if (submitWithCode(code)) {
+            finished = true;
+            cleanup();
+            return true;
+        }
+        return false;
+    };
+
+    const onInput = () => {
+        trySubmit(otpInput.value);
+    };
+    otpInput.addEventListener('input', onInput);
+
+    // Check if the field already has a 6-digit code on load
+    if (trySubmit(otpInput.value)) return;
+
+    let pollTimer = null;
+    const checkClipboard = async () => {
+        if (finished || !kalIdpTotpClipboard || isAutoLoginPaused()) return;
+        const clipText = await readClipboardForOtp(otpInput);
+        trySubmit(clipText);
+    };
+
+    const onFocus = () => {
+        checkClipboard();
+    };
+
+    function cleanup() {
+        if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+        }
+        window.removeEventListener('focus', onFocus);
+        otpInput.removeEventListener('input', onInput);
+    }
+
+    if (kalIdpTotpClipboard) {
+        checkClipboard();
+        pollTimer = setInterval(checkClipboard, 400);
+        window.addEventListener('focus', onFocus);
+        setTimeout(() => {
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+            window.removeEventListener('focus', onFocus);
+        }, KAL_DEFAULT_TIMEOUT_MS);
+    }
+}
 
 /**
  * Reads keys from `storage.sync`, automatically falling back to `storage.local`
@@ -326,11 +450,13 @@ async function getSettingsFromStorage(keys) {
  */
 async function shouldRun(siteKey) {
     try {
-        const { siteSettings = {}, pausedUntil = 0 } = await getSettingsFromStorage([
+        const { siteSettings = {}, pausedUntil = 0, idpTotpClipboard = false } = await getSettingsFromStorage([
             'siteSettings',
             'pausedUntil',
+            'idpTotpClipboard',
         ]);
         kalPausedUntil = Number(pausedUntil) || 0;
+        kalIdpTotpClipboard = !!idpTotpClipboard;
         if (isAutoLoginPaused()) {
             return false;
         }

@@ -27,16 +27,16 @@ let pauseExpiryTimer = null;
 async function getStoredConfig() {
     const syncArea = api.storage.sync || api.storage.local;
     const localArea = api.storage.local;
-    const keys = ['siteSettings', 'siteSortOrder', 'pausedUntil'];
+    const keys = ['siteSettings', 'siteSortOrder', 'pausedUntil', 'idpTotpClipboard'];
 
     const syncData = (await syncArea.get(keys)) || {};
-    if (syncData.siteSettings || syncData.siteSortOrder || syncData.pausedUntil) {
+    if (syncData.siteSettings || syncData.siteSortOrder || syncData.pausedUntil || 'idpTotpClipboard' in syncData) {
         return syncData;
     }
 
     if (localArea && localArea !== syncArea) {
         const localData = (await localArea.get(keys)) || {};
-        if (localData.siteSettings || localData.siteSortOrder || localData.pausedUntil) {
+        if (localData.siteSettings || localData.siteSortOrder || localData.pausedUntil || 'idpTotpClipboard' in localData) {
             await syncArea.set(localData);
             return localData;
         }
@@ -190,6 +190,22 @@ if (api.runtime.onStartup) {
 }
 
 api.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message?.type === 'kit-auto-login:read-clipboard') {
+        (async () => {
+            try {
+                if (typeof navigator !== 'undefined' && navigator.clipboard?.readText) {
+                    const text = await navigator.clipboard.readText();
+                    sendResponse({ ok: true, text: typeof text === 'string' ? text : '' });
+                    return;
+                }
+            } catch (e) {
+                // Ignore clipboard errors when permission is not granted or API unavailable
+            }
+            sendResponse({ ok: false, text: '' });
+        })();
+        return true;
+    }
+
     if (message?.type !== 'kit-auto-login:triggered') return false;
 
     (async () => {
