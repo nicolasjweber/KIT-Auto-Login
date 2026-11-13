@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        KIT Auto-Login
-// @version     2026.11.3
+// @version     2026.11.4
 // @description Automatically clicks through various KIT login pages (ILIAS, CAS Campus and other services).
 // @author      nicolasjweber
 // @homepageURL https://github.com/nicolasjweber/KIT-Auto-Login
@@ -8,6 +8,7 @@
 // @updateURL   https://raw.githubusercontent.com/nicolasjweber/KIT-Auto-Login/main/kit_auto_login.user.js
 // @match       https://idp.scc.kit.edu/*
 // @match       https://ilias.studium.kit.edu/*
+// @match       https://pilot.ilias.studium.kit.edu/*
 // @match       https://koala.kit.edu/*
 // @match       https://ilias-medien.bibliothek.kit.edu/*
 // @match       https://campus.studium.kit.edu/*
@@ -345,13 +346,13 @@
         ilias: {
             label: "ILIAS",
             url: "https://ilias.studium.kit.edu",
-            hosts: ["ilias.studium.kit.edu"],
+            hosts: ["ilias.studium.kit.edu", "pilot.ilias.studium.kit.edu"],
             loggedIn: ".il-avatar",
             steps: [
                 // Step 2: on the login selection page
-                { selector: "#button_shib_login", path: "/login" },
+                "#button_shib_login",
                 // Step 1: on any other page while logged out
-                { selector: '.header-inner a[href*="login.php"]', path: (p) => !p.includes("/login") },
+                { selector: '.header-inner a[href*="login.php"], header a[href*="login.php"]', path: (p) => !p.includes("/login") },
             ],
         },
         campus: {

@@ -34,13 +34,13 @@ const KIT_SITES = {
     ilias: {
         label: "ILIAS",
         url: "https://ilias.studium.kit.edu",
-        hosts: ["ilias.studium.kit.edu"],
+        hosts: ["ilias.studium.kit.edu", "pilot.ilias.studium.kit.edu"],
         loggedIn: ".il-avatar",
         steps: [
             // Step 2: on the login selection page
-            { selector: "#button_shib_login", path: "/login" },
+            "#button_shib_login",
             // Step 1: on any other page while logged out
-            { selector: '.header-inner a[href*="login.php"]', path: (p) => !p.includes("/login") },
+            { selector: '.header-inner a[href*="login.php"], header a[href*="login.php"]', path: (p) => !p.includes("/login") },
         ],
     },
     campus: {
